@@ -4,229 +4,248 @@ const moment = require('moment');
 class QuestionFlows {
   constructor() {
     this.flows = {
+      // Consent flow
       consent: {
         question: () => this.getConsentMessage(),
         handler: (input, session) => this.handleConsent(input, session)
       },
+      
+      // Welcome menu
       welcome: {
         question: (session) => this.getWelcomeMenu(session),
         handler: (input, session) => this.handleWelcomeMenu(input, session)
       },
+      
+      // Personal Information Flow
       personal_id: {
-        question: () => "Please enter your 13-digit South African ID number:",
+        question: () => "📝 *Please enter your 13-digit South African ID number:*\n\nExample: 9001010001088",
         handler: (input, session) => this.handlePersonalID(input, session)
       },
+      
       personal_name: {
-        question: () => "Please enter your full name:\n\nExample: John Doe",
+        question: (session) => "📝 *Please enter your full name:*\n\nExample: John Doe",
         handler: (input, session) => this.handlePersonalName(input, session)
       },
+      
       personal_dob: {
-        question: (session) => `Please enter your date of birth (DD/MM/YYYY):\n\nExample: 15/01/1990`,
+        question: (session) => "📝 *Please enter your date of birth (DD/MM/YYYY):*\n\nExample: 15/01/1990",
         handler: (input, session) => this.handlePersonalDOB(input, session)
       },
-      personal_dob_confirm: {
-        question: (session) => {
-          const dob = moment(session.data.personalInfo.dob).format('DD/MM/YYYY');
-          return `Your date of birth from ID: ${dob}\n\nIs this correct? Type YES to confirm or enter correct date (DD/MM/YYYY):`;
-        },
-        handler: (input, session) => this.handlePersonalDOBConfirm(input, session)
-      },
+      
       personal_phone: {
-        question: () => "Please enter your phone number:\n\nExample: 0712345678 or 27712345678",
+        question: (session) => "📝 *Please enter your phone number:*\n\nExample: 0712345678 or 27712345678",
         handler: (input, session) => this.handlePersonalPhone(input, session)
       },
+      
       personal_email: {
-        question: () => "Please enter your email address:",
+        question: (session) => "📝 *Please enter your email address:*\n\nExample: name@email.com",
         handler: (input, session) => this.handlePersonalEmail(input, session)
       },
-      business_menu: {
-        question: () => "🏢 *BUSINESS INFORMATION*\n\nLet's collect your business details.\n\nType START to begin:",
-        handler: (input, session) => this.handleBusinessMenu(input, session)
-      },
+      
+      // Business Information Flow
       business_name: {
-        question: () => "Please enter your Business Name:",
+        question: () => "🏢 *Please enter your Business Name:*",
         handler: (input, session) => this.handleBusinessName(input, session)
       },
+      
       business_trading: {
-        question: (session) => "Is your Trading Name different from your Business Name?\n\nType YES or NO:",
+        question: (session) => "🏢 *Is your Trading Name different from your Business Name?*\n\nType YES or NO",
         handler: (input, session) => this.handleBusinessTrading(input, session)
       },
+      
       business_trading_name: {
-        question: () => "Please enter your Trading Name:",
+        question: () => "🏢 *Please enter your Trading Name:*",
         handler: (input, session) => this.handleBusinessTradingName(input, session)
       },
+      
+      business_cipc: {
+        question: () => "🏢 *Please enter your CIPC Registration Number (if registered):*\n\nFormat: CK2012/123456/07\n\nIf not registered, type SKIP",
+        handler: (input, session) => this.handleBusinessCIPC(input, session)
+      },
+      
+      business_sub_sector: {
+        question: () => "🏢 *Please describe your business sub-sector:*\n\nExample: Organic vegetable farming, Mobile app development, Bakery, etc.",
+        handler: (input, session) => this.handleBusinessSubSector(input, session)
+      },
+      
+      business_description: {
+        question: (session) => "🏢 *Please provide a brief description of your business:*\n\nWhat do you do? What products/services do you offer?",
+        handler: (input, session) => this.handleBusinessDescription(input, session)
+      },
+      
       business_type: {
         question: () => this.getBusinessTypeOptions(),
         handler: (input, session) => this.handleBusinessType(input, session)
       },
-      business_cipc: {
-        question: () => "Please enter your CIPC Registration Number:\n\nFormat: CK2012/123456/07\n\nIf not registered, type SKIP:",
-        handler: (input, session) => this.handleBusinessCIPC(input, session)
-      },
+      
       business_industry: {
         question: () => this.getIndustryOptions(),
         handler: (input, session) => this.handleBusinessIndustry(input, session)
       },
-      business_sub_sector: {
-        question: () => "Please describe your business sub-sector:\n\nExample: Organic vegetable farming, Mobile app development, Bakery, etc.",
-        handler: (input, session) => this.handleBusinessSubSector(input, session)
-      },
-      business_description: {
-        question: () => "Please provide a brief description of your business (what you do, products/services):",
-        handler: (input, session) => this.handleBusinessDescription(input, session)
-      },
-      address_menu: {
-        question: () => "📍 *ADDRESS INFORMATION*\n\nLet's collect your business address.\n\nType START to begin:",
-        handler: (input, session) => this.handleAddressMenu(input, session)
-      },
+      
+      // Address Information Flow
       address_street: {
-        question: () => "Please enter your Street Address:\n\nExample: 123 Main Street",
+        question: () => "📍 *Please enter your Street Address:*\n\nExample: 123 Main Street",
         handler: (input, session) => this.handleAddressStreet(input, session)
       },
+      
       address_township: {
-        question: () => "Please enter your Township/Area:",
+        question: (session) => "📍 *Please enter your Township/Area:*",
         handler: (input, session) => this.handleAddressTownship(input, session)
       },
+      
       address_city: {
-        question: () => "Please enter your City:",
+        question: (session) => "📍 *Please enter your City:*",
         handler: (input, session) => this.handleAddressCity(input, session)
       },
+      
       address_district: {
-        question: () => "Please enter your District/Municipality:",
+        question: (session) => "📍 *Please enter your District/Municipality:*",
         handler: (input, session) => this.handleAddressDistrict(input, session)
       },
+      
       address_province: {
         question: () => this.getProvinceOptions(),
         handler: (input, session) => this.handleAddressProvince(input, session)
       },
+      
       address_zip: {
-        question: () => "Please enter your ZIP/Postal Code (4 digits):\n\nExample: 2000",
+        question: (session) => "📍 *Please enter your ZIP/Postal Code (4 digits):*\n\nExample: 2000",
         handler: (input, session) => this.handleAddressZip(input, session)
       },
-      employment_menu: {
-        question: () => "👥 *EMPLOYMENT & REVENUE*\n\nLet's collect employment and revenue details.\n\nType START to begin:",
-        handler: (input, session) => this.handleEmploymentMenu(input, session)
-      },
+      
+      // Employment & Revenue Flow
       employment_total: {
-        question: () => "How many total employees do you have?\n\nEnter number:",
+        question: () => "👥 *How many total employees do you have?*\n\nEnter number:",
         handler: (input, session) => this.handleEmploymentTotal(input, session)
       },
+      
       employment_fulltime: {
-        question: () => "How many of these are Full-Time employees?\n\nEnter number:",
+        question: (session) => "👥 *How many of these are Full-Time employees?*\n\nEnter number:",
         handler: (input, session) => this.handleEmploymentFullTime(input, session)
       },
+      
       employment_parttime: {
-        question: () => "How many are Part-Time employees?\n\nEnter number:",
+        question: (session) => "👥 *How many are Part-Time employees?*\n\nEnter number:",
         handler: (input, session) => this.handleEmploymentPartTime(input, session)
       },
+      
       employment_years: {
-        question: () => "How many years has your business been in operation?\n\nEnter number:",
+        question: (session) => "📅 *How many years has your business been in operation?*\n\nEnter number:",
         handler: (input, session) => this.handleEmploymentYears(input, session)
       },
+      
       employment_revenue: {
         question: () => this.getRevenueOptions(),
         handler: (input, session) => this.handleEmploymentRevenue(input, session)
       },
-      funding_menu: {
-        question: () => "💵 *FUNDING REQUEST*\n\nLet's collect your funding needs.\n\nType START to begin:",
-        handler: (input, session) => this.handleFundingMenu(input, session)
-      },
+      
+      // Funding Request Flow
       funding_amount: {
-        question: () => "How much funding are you requesting (in ZAR)?\n\nEnter amount:",
+        question: () => "💰 *How much funding are you requesting (in ZAR)?*\n\nEnter amount:",
         handler: (input, session) => this.handleFundingAmount(input, session)
       },
+      
       funding_purpose: {
         question: () => this.getFundingPurposeOptions(),
         handler: (input, session) => this.handleFundingPurpose(input, session)
       },
+      
       funding_other_purpose: {
-        question: () => "Please specify the 'Other' funding purpose:",
+        question: () => "📝 *Please specify the 'Other' funding purpose:*",
         handler: (input, session) => this.handleFundingOtherPurpose(input, session)
       },
+      
       funding_type: {
         question: () => this.getFundingTypeOptions(),
         handler: (input, session) => this.handleFundingType(input, session)
       },
+      
       funding_repayment: {
-        question: () => "Can you demonstrate loan repayment ability?\n\nOptions: YES, NO, UNSURE",
+        question: () => "💳 *Can you demonstrate loan repayment ability?*\n\nOptions: YES, NO, UNSURE",
         handler: (input, session) => this.handleFundingRepayment(input, session)
       },
+      
       funding_justification: {
-        question: () => "Please provide a detailed justification for your funding request:\n\nExplain how you will use the funds and the expected impact on your business.",
+        question: (session) => "📄 *Please provide a detailed justification for your funding request:*\n\nExplain how you will use the funds and the expected impact on your business.",
         handler: (input, session) => this.handleFundingJustification(input, session)
       },
-      readiness_menu: {
-        question: () => "📋 *READINESS ASSESSMENT*\n\nLet's assess your business readiness.\n\nType START to begin:",
-        handler: (input, session) => this.handleReadinessMenu(input, session)
-      },
+      
+      // Readiness Assessment Flow
       readiness_business_plan: {
         question: () => this.getBusinessPlanOptions(),
         handler: (input, session) => this.handleReadinessBusinessPlan(input, session)
       },
+      
       readiness_financial_records: {
         question: () => this.getFinancialRecordsOptions(),
         handler: (input, session) => this.handleReadinessFinancialRecords(input, session)
       },
+      
       readiness_bank_statements: {
         question: () => this.getBankStatementsOptions(),
         handler: (input, session) => this.handleReadinessBankStatements(input, session)
       },
+      
       readiness_training: {
         question: () => this.getTrainingOptions(),
         handler: (input, session) => this.handleReadinessTraining(input, session)
       },
+      
       readiness_cooperative: {
         question: () => this.getCooperativeOptions(),
         handler: (input, session) => this.handleReadinessCooperative(input, session)
       },
+      
       readiness_self_assessment: {
         question: () => this.getSelfAssessmentOptions(),
         handler: (input, session) => this.handleReadinessSelfAssessment(input, session)
       },
+      
       readiness_support_needs: {
         question: () => this.getSupportNeedsOptions(),
         handler: (input, session) => this.handleReadinessSupportNeeds(input, session)
       },
+      
+      // Review and Submit
       review_summary: {
         question: (session) => this.getApplicationSummary(session.data),
         handler: (input, session) => this.handleReviewSummary(input, session)
       },
+      
       confirm_submission: {
-        question: () => "Are you ready to submit your application?\n\nType SUBMIT to submit or BACK to review",
+        question: () => "📬 *Are you ready to submit your application?*\n\nType CONFIRM to submit or BACK to review",
         handler: (input, session) => this.handleConfirmSubmission(input, session)
       },
+      
       save_confirm: {
-        question: () => "Would you like to save your progress and continue later?\n\nType SAVE to save or CONTINUE to keep filling",
+        question: () => "💾 *Would you like to save your progress and continue later?*\n\nType YES to save or NO to continue",
         handler: (input, session) => this.handleSaveConfirm(input, session)
       },
+      
       edit_menu: {
         question: (session) => this.getEditMenu(session.data),
         handler: (input, session) => this.handleEditMenu(input, session)
-      },
-      continue_menu: {
-        question: (session) => {
-          const progress = this.calculateProgress(session.data);
-          return `Your application is ${progress}% complete. Where would you like to continue?\n\nType:\nPERSONAL - Personal Information\nBUSINESS - Business Information\nADDRESS - Address Information\nEMPLOYMENT - Employment & Revenue\nFUNDING - Funding Request\nREADINESS - Readiness Assessment\nREVIEW - Review & Submit`;
-        },
-        handler: (input, session) => this.handleContinueMenu(input, session)
       }
     };
   }
 
   getQuestion(step, session) {
     const flow = this.flows[step];
-    return flow ? flow.question(session) : "Invalid step. Type MENU to see options.";
+    if (!flow) {
+      return "Invalid step. Please type RESTART to start over.";
+    }
+    return flow.question(session);
   }
 
   handleAnswer(step, input, session) {
     const flow = this.flows[step];
-    return flow ? flow.handler(input, session) : { 
-      response: "Invalid step. Type MENU to see options.", 
-      nextStep: 'welcome' 
-    };
+    if (!flow) {
+      return { response: "Invalid step. Please type RESTART to start over.", nextStep: 'welcome' };
+    }
+    return flow.handler(input, session);
   }
 
-  // Consent Section
   getConsentMessage() {
     return `🔐 *DATA PRIVACY & CONSENT AGREEMENT* 🔐
 
@@ -240,156 +259,40 @@ Before we begin, please read and agree to how we handle your data:
 
 ✅ *HOW WE USE YOUR DATA:*
 • Process your funding application
-• Contact you regarding your application
-• Improve our services (anonymized data)
-• Comply with legal requirements
+• Contact you regarding your application status
+• Improve our services (using anonymized data)
+• Comply with legal and regulatory requirements
 
 ✅ *YOUR RIGHTS:*
-• Access your data anytime
-• Request corrections
-• Withdraw consent
-• Request deletion (where applicable)
+• Access your personal data anytime
+• Request corrections to inaccurate data
+• Withdraw consent at any time
+• Request deletion of your data
 
-📞 *Contact for privacy questions:* privacy@fundingsa.org.za
+📞 *Privacy questions:* privacy@fundingsa.org.za
 
-Type *AGREE* to consent and continue, or *EXIT* to cancel.`;
+*Type AGREE to consent and continue, or EXIT to cancel.*`;
   }
 
-  handleConsent(input, session) {
-    const normalizedInput = input.toLowerCase().trim();
-    
-    if (normalizedInput === 'agree') {
-      session.data.consentGiven = true;
-      session.data.consentTimestamp = new Date().toISOString();
-      return {
-        response: "✅ Thank you for your consent. Let's begin your funding application!\n\nType MENU at any time for options.",
-        nextStep: 'welcome'
-      };
-    } else if (normalizedInput === 'exit') {
-      return {
-        response: "Application cancelled. Your data has not been saved.",
-        nextStep: null
-      };
-    } else {
-      return {
-        response: "Please type AGREE to continue or EXIT to cancel.",
-        nextStep: 'consent'
-      };
-    }
-  }
-
-  // Welcome Menu
   getWelcomeMenu(session) {
     let menu = "🌟 *FUNDING APPLICATION BOT* 🌟\n\n";
     
-    if (session.data.personalInfo?.idNumber) {
-      const name = session.data.personalInfo.fullName || 'Applicant';
-      const progress = this.calculateProgress(session.data);
-      menu += `Welcome back, ${name}!\n📊 Progress: ${progress}%\n\n`;
-    } else {
-      menu += "Welcome to the Funding Application System!\n\n";
+    if (session.data.personalInfo?.fullName) {
+      menu += `Welcome back, ${session.data.personalInfo.fullName}!\n\n`;
     }
     
-    menu += "Please choose:\n\n";
-    menu += "1️⃣ *Start/Continue Application*\n";
-    menu += "2️⃣ *View Progress*\n";
-    menu += "3️⃣ *Edit Information*\n";
-    menu += "4️⃣ *Save & Exit*\n";
-    menu += "5️⃣ *Help*\n\n";
-    menu += "Type the number or command:";
+    const progress = this.calculateProgress(session.data);
+    menu += `📊 Your progress: ${progress}%\n\n`;
+    
+    menu += "What would you like to do?\n\n";
+    menu += "1️⃣ Continue Application\n";
+    menu += "2️⃣ View Progress\n";
+    menu += "3️⃣ Edit Information\n";
+    menu += "4️⃣ Save & Exit\n";
+    menu += "5️⃣ Help\n\n";
+    menu += "Type the number of your choice:";
     
     return menu;
-  }
-
-  calculateProgress(data) {
-    let completed = 0;
-    let total = 38; // Total fields across all sections
-    
-    // Personal Info (5 fields)
-    if (data.personalInfo?.idNumber) completed++;
-    if (data.personalInfo?.fullName) completed++;
-    if (data.personalInfo?.dob) completed++;
-    if (data.personalInfo?.phone) completed++;
-    if (data.personalInfo?.email) completed++;
-    
-    // Business Info (8 fields)
-    if (data.businessInfo?.businessName) completed++;
-    if (data.businessInfo?.tradingName) completed++;
-    if (data.businessInfo?.businessType) completed++;
-    if (data.businessInfo?.cipcNumber !== undefined) completed++;
-    if (data.businessInfo?.industry) completed++;
-    if (data.businessInfo?.subSector) completed++;
-    if (data.businessInfo?.description) completed++;
-    
-    // Address Info (6 fields)
-    if (data.addressInfo?.streetAddress) completed++;
-    if (data.addressInfo?.township) completed++;
-    if (data.addressInfo?.city) completed++;
-    if (data.addressInfo?.district) completed++;
-    if (data.addressInfo?.province) completed++;
-    if (data.addressInfo?.zipCode) completed++;
-    
-    // Employment & Revenue (5 fields)
-    if (data.employmentRevenue?.totalEmployees !== undefined) completed++;
-    if (data.employmentRevenue?.fullTimeCount !== undefined) completed++;
-    if (data.employmentRevenue?.partTimeCount !== undefined) completed++;
-    if (data.employmentRevenue?.yearsInOperation !== undefined) completed++;
-    if (data.employmentRevenue?.monthlyRevenueRange) completed++;
-    
-    // Funding Request (6 fields)
-    if (data.fundingRequest?.fundingAmount !== undefined) completed++;
-    if (data.fundingRequest?.fundingPurpose) completed++;
-    if (data.fundingRequest?.preferredFundingType) completed++;
-    if (data.fundingRequest?.loanRepaymentAbility) completed++;
-    if (data.fundingRequest?.justification) completed++;
-    
-    // Readiness Assessment (8 fields)
-    if (data.readinessAssessment?.businessPlanStatus) completed++;
-    if (data.readinessAssessment?.financialRecords) completed++;
-    if (data.readinessAssessment?.bankStatements) completed++;
-    if (data.readinessAssessment?.businessTraining) completed++;
-    if (data.readinessAssessment?.cooperativeInterest) completed++;
-    if (data.readinessAssessment?.selfAssessmentReadiness) completed++;
-    if (data.readinessAssessment?.supportNeeds) completed++;
-    
-    return Math.round((completed / total) * 100);
-  }
-
-  handleWelcomeMenu(input, session) {
-    const normalizedInput = input.toLowerCase().trim();
-    
-    switch(normalizedInput) {
-      case '1':
-      case 'start':
-      case 'continue':
-        if (!session.data.personalInfo?.idNumber) {
-          return { response: "Let's start with personal information.", nextStep: 'personal_id' };
-        } else if (!session.data.businessInfo?.businessName) {
-          return { response: "Let's continue with business information.", nextStep: 'business_menu' };
-        } else {
-          return { response: "Where would you like to continue?", nextStep: 'continue_menu' };
-        }
-      case '2':
-      case 'progress':
-        const progress = this.calculateProgress(session.data);
-        return {
-          response: `📊 *APPLICATION PROGRESS*\n\nOverall Completion: ${progress}%\n\nType CONTINUE to resume.`,
-          nextStep: 'welcome'
-        };
-      case '3':
-      case 'edit':
-        return { response: "Which section would you like to edit?", nextStep: 'edit_menu' };
-      case '4':
-      case 'save':
-        return { response: "Would you like to save your progress?", nextStep: 'save_confirm' };
-      case '5':
-      case 'help':
-        return { response: this.getHelpMessage(), nextStep: 'welcome' };
-      case 'menu':
-        return { response: this.getWelcomeMenu(session), nextStep: 'welcome' };
-      default:
-        return { response: "Please choose 1-5 or type START.", nextStep: 'welcome' };
-    }
   }
 
   getHelpMessage() {
@@ -399,15 +302,17 @@ Type *AGREE* to consent and continue, or *EXIT* to cancel.`;
 • MENU - Show main menu
 • SAVE - Save progress and exit
 • CONTINUE - Continue application
-• PROGRESS - View progress
+• PROGRESS - View application progress
 • EDIT - Edit a section
-• HELP - Show this message
-• EXIT - Cancel
+• RESTART - Start over
+• HELP - Show this help message
+• EXIT - Cancel application
 
-*Support:* support@fundingsa.org.za
-*Hours:* Mon-Fri, 8am-5pm
+*Need assistance?*
+📧 support@fundingsa.org.za
+📞 0800 123 4567
 
-Type MENU to return.`;
+Type MENU to return to the main menu.`;
   }
 
   // Personal Information Handlers
@@ -424,9 +329,10 @@ Type MENU to return.`;
     session.data.personalInfo = session.data.personalInfo || {};
     session.data.personalInfo.idNumber = validation.data.idNumber;
     session.data.personalInfo.dob = validation.data.dateOfBirth;
+    session.data.personalInfo.age = validation.data.age;
     
     return {
-      response: `✅ ID verified. Age: ${validation.data.age} years.\n\nPlease enter your full name:`,
+      response: `✅ ID number verified. Age: ${validation.data.age} years.\n\nNow, please enter your full name:`,
       nextStep: 'personal_name'
     };
   }
@@ -444,29 +350,17 @@ Type MENU to return.`;
     session.data.personalInfo.fullName = input.trim();
     
     if (session.data.personalInfo.dob) {
+      const dobDate = moment(session.data.personalInfo.dob);
       return {
-        response: `✅ Name recorded.\n\nDate of birth from ID: ${moment(session.data.personalInfo.dob).format('DD/MM/YYYY')}\n\nIs this correct? Type YES or enter correct date:`,
+        response: `✅ Name recorded.\n\nYour date of birth from ID: ${dobDate.format('DD/MM/YYYY')}\n\nIs this correct? Type YES or enter correct date (DD/MM/YYYY):`,
         nextStep: 'personal_dob_confirm'
       };
     }
     
     return {
-      response: "✅ Name recorded.\n\nPlease enter your date of birth (DD/MM/YYYY):",
+      response: `✅ Name recorded.\n\nPlease enter your date of birth (DD/MM/YYYY):`,
       nextStep: 'personal_dob'
     };
-  }
-
-  handlePersonalDOBConfirm(input, session) {
-    const normalizedInput = input.toLowerCase().trim();
-    
-    if (normalizedInput === 'yes' || normalizedInput === 'y') {
-      return {
-        response: "✅ Date confirmed.\n\nPlease enter your phone number:",
-        nextStep: 'personal_phone'
-      };
-    } else {
-      return this.handlePersonalDOB(input, session);
-    }
   }
 
   handlePersonalDOB(input, session) {
@@ -474,7 +368,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter date (DD/MM/YYYY):`,
+        response: `❌ ${validation.message}\n\nPlease enter date in DD/MM/YYYY format:`,
         nextStep: 'personal_dob'
       };
     }
@@ -482,7 +376,7 @@ Type MENU to return.`;
     session.data.personalInfo.dob = validation.data.dob;
     
     return {
-      response: "✅ Date recorded.\n\nPlease enter your phone number:",
+      response: `✅ Date of birth recorded.\n\nPlease enter your phone number:`,
       nextStep: 'personal_phone'
     };
   }
@@ -500,7 +394,7 @@ Type MENU to return.`;
     session.data.personalInfo.phone = validation.data.formatted;
     
     return {
-      response: "✅ Phone recorded.\n\nPlease enter your email address:",
+      response: `✅ Phone number recorded.\n\nPlease enter your email address:`,
       nextStep: 'personal_email'
     };
   }
@@ -510,7 +404,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter your email:`,
+        response: `❌ ${validation.message}\n\nPlease enter your email address:`,
         nextStep: 'personal_email'
       };
     }
@@ -518,31 +412,18 @@ Type MENU to return.`;
     session.data.personalInfo.email = input.trim().toLowerCase();
     
     return {
-      response: "✅ Personal information completed!\n\nLet's move to business information.",
-      nextStep: 'business_menu'
+      response: `✅ Personal information completed!\n\nLet's move to business information.\n\n*Please enter your Business Name:*`,
+      nextStep: 'business_name'
     };
   }
 
-  // Business Information
-  handleBusinessMenu(input, session) {
-    if (input.toLowerCase().trim() === 'start') {
-      return {
-        response: "Please enter your Business Name:",
-        nextStep: 'business_name'
-      };
-    }
-    return {
-      response: "Please type START to begin business information.",
-      nextStep: 'business_menu'
-    };
-  }
-
+  // Business Information Handlers
   handleBusinessName(input, session) {
     const validation = ValidationService.validateBusinessName(input);
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter Business Name:`,
+        response: `❌ ${validation.message}\n\nPlease enter your Business Name:`,
         nextStep: 'business_name'
       };
     }
@@ -551,7 +432,7 @@ Type MENU to return.`;
     session.data.businessInfo.businessName = input.trim();
     
     return {
-      response: "✅ Business name recorded.\n\nIs Trading Name different? Type YES or NO:",
+      response: `✅ Business name recorded.\n\nIs your Trading Name different from your Business Name?\n\nType YES or NO:`,
       nextStep: 'business_trading'
     };
   }
@@ -559,20 +440,20 @@ Type MENU to return.`;
   handleBusinessTrading(input, session) {
     const normalizedInput = input.toLowerCase().trim();
     
-    if (normalizedInput === 'yes' || normalizedInput === 'y') {
+    if (normalizedInput === 'yes') {
       return {
         response: "Please enter your Trading Name:",
         nextStep: 'business_trading_name'
       };
-    } else if (normalizedInput === 'no' || normalizedInput === 'n') {
+    } else if (normalizedInput === 'no') {
       session.data.businessInfo.tradingName = session.data.businessInfo.businessName;
       return {
-        response: this.getBusinessTypeOptions(),
-        nextStep: 'business_type'
+        response: "✅ Using Business Name as Trading Name.\n\nPlease enter your CIPC Registration Number (if registered):\n\nFormat: CK2012/123456/07\n\nIf not registered, type SKIP:",
+        nextStep: 'business_cipc'
       };
     } else {
       return {
-        response: "Please type YES or NO:",
+        response: "Please type YES or NO:\n\nIs your Trading Name different from your Business Name?",
         nextStep: 'business_trading'
       };
     }
@@ -583,12 +464,72 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter Trading Name:`,
+        response: `❌ ${validation.message}\n\nPlease enter your Trading Name:`,
         nextStep: 'business_trading_name'
       };
     }
     
     session.data.businessInfo.tradingName = input.trim();
+    
+    return {
+      response: "✅ Trading Name recorded.\n\nPlease enter your CIPC Registration Number (if registered):\n\nFormat: CK2012/123456/07\n\nIf not registered, type SKIP:",
+      nextStep: 'business_cipc'
+    };
+  }
+
+  handleBusinessCIPC(input, session) {
+    if (input.toLowerCase().trim() === 'skip') {
+      session.data.businessInfo.cipcNumber = 'Not Provided';
+      return {
+        response: "✅ No CIPC number provided.\n\nPlease describe your business sub-sector:\n\nExample: Organic vegetable farming, Mobile app development, Bakery, etc.",
+        nextStep: 'business_sub_sector'
+      };
+    }
+    
+    const validation = ValidationService.validateCIPC(input);
+    
+    if (!validation.valid) {
+      return {
+        response: `❌ ${validation.message}\n\nPlease enter CIPC in format: CK2012/123456/07 or type SKIP:`,
+        nextStep: 'business_cipc'
+      };
+    }
+    
+    session.data.businessInfo.cipcNumber = input.trim().toUpperCase();
+    
+    return {
+      response: "✅ CIPC number recorded.\n\nPlease describe your business sub-sector:\n\nExample: Organic vegetable farming, Mobile app development, Bakery, etc.",
+      nextStep: 'business_sub_sector'
+    };
+  }
+
+  handleBusinessSubSector(input, session) {
+    if (!input || input.trim().length < 3) {
+      return {
+        response: "❌ Please provide a valid sub-sector description (at least 3 characters).",
+        nextStep: 'business_sub_sector'
+      };
+    }
+    
+    session.data.businessInfo.subSector = input.trim();
+    
+    return {
+      response: "✅ Sub-sector recorded.\n\nPlease provide a brief description of your business:",
+      nextStep: 'business_description'
+    };
+  }
+
+  handleBusinessDescription(input, session) {
+    const validation = ValidationService.validateTextField(input, 'Business description', 20, 500);
+    
+    if (!validation.valid) {
+      return {
+        response: `❌ ${validation.message}\n\nPlease provide a business description:`,
+        nextStep: 'business_description'
+      };
+    }
+    
+    session.data.businessInfo.description = input.trim();
     
     return {
       response: this.getBusinessTypeOptions(),
@@ -607,8 +548,13 @@ Type MENU to return.`;
       "Other"
     ];
     
-    let message = "🏢 *BUSINESS TYPE*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "🏢 *BUSINESS TYPE*\n\n";
+    message += "Please select your business type:\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number or name:";
     
     return message;
@@ -629,30 +575,12 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select business type:`,
+        response: `❌ ${validation.message}\n\nPlease select your business type:`,
         nextStep: 'business_type'
       };
     }
     
     session.data.businessInfo.businessType = validation.data || input;
-    
-    return {
-      response: "✅ Business type recorded.\n\nDo you have CIPC Registration Number? Enter it or type SKIP:",
-      nextStep: 'business_cipc'
-    };
-  }
-
-  handleBusinessCIPC(input, session) {
-    const validation = ValidationService.validateCIPC(input);
-    
-    if (!validation.valid) {
-      return {
-        response: `❌ ${validation.message}`,
-        nextStep: 'business_cipc'
-      };
-    }
-    
-    session.data.businessInfo.cipcNumber = input.toLowerCase() === 'skip' ? 'Not Provided' : input.trim().toUpperCase();
     
     return {
       response: this.getIndustryOptions(),
@@ -671,8 +599,13 @@ Type MENU to return.`;
       "Other"
     ];
     
-    let message = "🏭 *INDUSTRY*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "🏭 *INDUSTRY*\n\n";
+    message += "Please select your industry:\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number or name:";
     
     return message;
@@ -693,7 +626,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select industry:`,
+        response: `❌ ${validation.message}\n\nPlease select your industry:`,
         nextStep: 'business_industry'
       };
     }
@@ -701,65 +634,18 @@ Type MENU to return.`;
     session.data.businessInfo.industry = validation.data || input;
     
     return {
-      response: "✅ Industry recorded.\n\nPlease describe your business sub-sector:\n\nExample: Organic vegetable farming, Mobile app development, etc.",
-      nextStep: 'business_sub_sector'
+      response: "✅ Business information completed!\n\nLet's move to address information.\n\n*Please enter your Street Address:*",
+      nextStep: 'address_street'
     };
   }
 
-  handleBusinessSubSector(input, session) {
-    if (!input || input.trim().length < 3) {
-      return {
-        response: "❌ Please provide a valid sub-sector (at least 3 characters).",
-        nextStep: 'business_sub_sector'
-      };
-    }
-    
-    session.data.businessInfo.subSector = input.trim();
-    
-    return {
-      response: "✅ Sub-sector recorded.\n\nPlease provide a business description:",
-      nextStep: 'business_description'
-    };
-  }
-
-  handleBusinessDescription(input, session) {
-    const validation = ValidationService.validateTextField(input, 'Business description', 20, 500);
-    
-    if (!validation.valid) {
-      return {
-        response: `❌ ${validation.message}\n\nPlease provide description:`,
-        nextStep: 'business_description'
-      };
-    }
-    
-    session.data.businessInfo.description = input.trim();
-    
-    return {
-      response: "✅ Business information completed!\n\nLet's move to address information.",
-      nextStep: 'address_menu'
-    };
-  }
-
-  // Address Information
-  handleAddressMenu(input, session) {
-    if (input.toLowerCase().trim() === 'start') {
-      return {
-        response: "Please enter your Street Address:",
-        nextStep: 'address_street'
-      };
-    }
-    return {
-      response: "Please type START to begin address information.",
-      nextStep: 'address_menu'
-    };
-  }
-
+  // Address Information Handlers
   handleAddressStreet(input, session) {
     const validation = ValidationService.validateAddressField(input, 'Street address');
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter Street Address:`,
+        response: `❌ ${validation.message}\n\nPlease enter your Street Address:`,
         nextStep: 'address_street'
       };
     }
@@ -778,7 +664,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter Township:`,
+        response: `❌ ${validation.message}\n\nPlease enter your Township/Area:`,
         nextStep: 'address_township'
       };
     }
@@ -796,7 +682,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter City:`,
+        response: `❌ ${validation.message}\n\nPlease enter your City:`,
         nextStep: 'address_city'
       };
     }
@@ -814,7 +700,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter District:`,
+        response: `❌ ${validation.message}\n\nPlease enter your District/Municipality:`,
         nextStep: 'address_district'
       };
     }
@@ -840,8 +726,13 @@ Type MENU to return.`;
       "Western Cape"
     ];
     
-    let message = "🗺️ *PROVINCE*\n\nPlease select:\n\n";
-    provinces.forEach((prov, i) => message += `${i+1}. ${prov}\n`);
+    let message = "🗺️ *PROVINCE*\n\n";
+    message += "Please select your province:\n\n";
+    
+    provinces.forEach((province, index) => {
+      message += `${index + 1}. ${province}\n`;
+    });
+    
     message += "\nType the number or name:";
     
     return message;
@@ -864,7 +755,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select province:`,
+        response: `❌ ${validation.message}\n\nPlease select your province:`,
         nextStep: 'address_province'
       };
     }
@@ -872,7 +763,7 @@ Type MENU to return.`;
     session.data.addressInfo.province = validation.data || input;
     
     return {
-      response: "✅ Province recorded.\n\nPlease enter your ZIP Code (4 digits):",
+      response: "✅ Province recorded.\n\nPlease enter your ZIP/Postal Code (4 digits):\n\nExample: 2000",
       nextStep: 'address_zip'
     };
   }
@@ -882,7 +773,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter ZIP code:`,
+        response: `❌ ${validation.message}\n\nPlease enter your ZIP code (4 digits):`,
         nextStep: 'address_zip'
       };
     }
@@ -890,31 +781,18 @@ Type MENU to return.`;
     session.data.addressInfo.zipCode = validation.data;
     
     return {
-      response: "✅ Address information completed!\n\nLet's move to employment & revenue.",
-      nextStep: 'employment_menu'
+      response: "✅ Address information completed!\n\nLet's move to employment and revenue details.\n\n*How many total employees do you have?*",
+      nextStep: 'employment_total'
     };
   }
 
-  // Employment & Revenue
-  handleEmploymentMenu(input, session) {
-    if (input.toLowerCase().trim() === 'start') {
-      return {
-        response: "How many total employees do you have?\n\nEnter number:",
-        nextStep: 'employment_total'
-      };
-    }
-    return {
-      response: "Please type START to begin employment information.",
-      nextStep: 'employment_menu'
-    };
-  }
-
+  // Employment & Revenue Handlers
   handleEmploymentTotal(input, session) {
     const validation = ValidationService.validateEmployeeCount(input);
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter total employees:`,
+        response: `❌ ${validation.message}\n\nPlease enter number of total employees:`,
         nextStep: 'employment_total'
       };
     }
@@ -923,7 +801,7 @@ Type MENU to return.`;
     session.data.employmentRevenue.totalEmployees = validation.data;
     
     return {
-      response: "✅ Total employees recorded.\n\nHow many are Full-Time?\n\nEnter number:",
+      response: "✅ Total employees recorded.\n\nHow many of these are Full-Time employees?",
       nextStep: 'employment_fulltime'
     };
   }
@@ -933,7 +811,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter full-time count:`,
+        response: `❌ ${validation.message}\n\nPlease enter number of full-time employees:`,
         nextStep: 'employment_fulltime'
       };
     }
@@ -941,7 +819,7 @@ Type MENU to return.`;
     session.data.employmentRevenue.fullTimeCount = validation.data;
     
     return {
-      response: "✅ Full-time recorded.\n\nHow many are Part-Time?\n\nEnter number:",
+      response: "✅ Full-time employees recorded.\n\nHow many are Part-Time employees?",
       nextStep: 'employment_parttime'
     };
   }
@@ -951,7 +829,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter part-time count:`,
+        response: `❌ ${validation.message}\n\nPlease enter number of part-time employees:`,
         nextStep: 'employment_parttime'
       };
     }
@@ -959,7 +837,7 @@ Type MENU to return.`;
     session.data.employmentRevenue.partTimeCount = validation.data;
     
     return {
-      response: "✅ Part-time recorded.\n\nHow many years in operation?\n\nEnter number:",
+      response: "✅ Part-time employees recorded.\n\nHow many years has your business been in operation?",
       nextStep: 'employment_years'
     };
   }
@@ -990,8 +868,13 @@ Type MENU to return.`;
       "> R200,000"
     ];
     
-    let message = "💰 *MONTHLY REVENUE RANGE*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "💰 *MONTHLY REVENUE RANGE*\n\n";
+    message += "Please select your monthly revenue range:\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1009,7 +892,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select revenue range:`,
+        response: `❌ ${validation.message}\n\nPlease select your revenue range:`,
         nextStep: 'employment_revenue'
       };
     }
@@ -1017,31 +900,18 @@ Type MENU to return.`;
     session.data.employmentRevenue.monthlyRevenueRange = validation.data || input;
     
     return {
-      response: "✅ Employment & Revenue completed!\n\nLet's move to funding request.",
-      nextStep: 'funding_menu'
+      response: "✅ Employment & Revenue information completed!\n\nLet's move to funding request details.\n\n*How much funding are you requesting (in ZAR)?*",
+      nextStep: 'funding_amount'
     };
   }
 
-  // Funding Request
-  handleFundingMenu(input, session) {
-    if (input.toLowerCase().trim() === 'start') {
-      return {
-        response: "How much funding are you requesting (in ZAR)?\n\nEnter amount:",
-        nextStep: 'funding_amount'
-      };
-    }
-    return {
-      response: "Please type START to begin funding request.",
-      nextStep: 'funding_menu'
-    };
-  }
-
+  // Funding Request Handlers
   handleFundingAmount(input, session) {
     const validation = ValidationService.validateFundingAmount(input);
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease enter funding amount:`,
+        response: `❌ ${validation.message}\n\nPlease enter funding amount (R1,000 - R10,000,000):`,
         nextStep: 'funding_amount'
       };
     }
@@ -1064,9 +934,14 @@ Type MENU to return.`;
       "Other"
     ];
     
-    let message = "🎯 *FUNDING PURPOSE*\n\nSelect multiple (comma-separated):\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
-    message += "\nExample: 1,3 or type names:";
+    let message = "🎯 *FUNDING PURPOSE*\n\n";
+    message += "Please select your funding purpose (you can select multiple):\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
+    message += "\nType the numbers separated by commas (e.g., 1,3):";
     
     return message;
   }
@@ -1093,7 +968,7 @@ Type MENU to return.`;
     
     if (validation.data.includes("Other")) {
       return {
-        response: "Please specify 'Other' funding purpose:",
+        response: "Please specify the 'Other' funding purpose:",
         nextStep: 'funding_other_purpose'
       };
     }
@@ -1107,7 +982,7 @@ Type MENU to return.`;
   handleFundingOtherPurpose(input, session) {
     if (!input || input.trim().length < 5) {
       return {
-        response: "❌ Please provide a valid purpose (at least 5 characters).",
+        response: "❌ Please provide a valid purpose description (at least 5 characters).",
         nextStep: 'funding_other_purpose'
       };
     }
@@ -1128,8 +1003,13 @@ Type MENU to return.`;
       "Other"
     ];
     
-    let message = "📝 *PREFERRED FUNDING TYPE*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "📝 *PREFERRED FUNDING TYPE*\n\n";
+    message += "Please select your preferred funding type:\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number or name:";
     
     return message;
@@ -1156,13 +1036,13 @@ Type MENU to return.`;
     
     if ((validation.data || input).toLowerCase().includes('loan')) {
       return {
-        response: "Can you demonstrate loan repayment ability?\n\nYES, NO, or UNSURE:",
+        response: "Can you demonstrate loan repayment ability?\n\nOptions: YES, NO, UNSURE",
         nextStep: 'funding_repayment'
       };
     }
     
     return {
-      response: "✅ Funding type recorded.\n\nPlease provide funding justification:",
+      response: "✅ Funding type recorded.\n\nPlease provide a detailed justification for your funding request:",
       nextStep: 'funding_justification'
     };
   }
@@ -1181,7 +1061,7 @@ Type MENU to return.`;
     session.data.fundingRequest.loanRepaymentAbility = normalizedInput;
     
     return {
-      response: "✅ Repayment ability recorded.\n\nPlease provide funding justification:",
+      response: "✅ Repayment ability recorded.\n\nPlease provide a detailed justification for your funding request:",
       nextStep: 'funding_justification'
     };
   }
@@ -1191,7 +1071,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease provide justification:`,
+        response: `❌ ${validation.message}\n\nPlease provide funding justification:`,
         nextStep: 'funding_justification'
       };
     }
@@ -1199,25 +1079,12 @@ Type MENU to return.`;
     session.data.fundingRequest.justification = input.trim();
     
     return {
-      response: "✅ Funding request completed!\n\nLet's move to readiness assessment.",
-      nextStep: 'readiness_menu'
+      response: "✅ Funding request completed!\n\nLet's move to readiness assessment.\n\n*Do you have a business plan?*",
+      nextStep: 'readiness_business_plan'
     };
   }
 
-  // Readiness Assessment
-  handleReadinessMenu(input, session) {
-    if (input.toLowerCase().trim() === 'start') {
-      return {
-        response: this.getBusinessPlanOptions(),
-        nextStep: 'readiness_business_plan'
-      };
-    }
-    return {
-      response: "Please type START to begin readiness assessment.",
-      nextStep: 'readiness_menu'
-    };
-  }
-
+  // Readiness Assessment Handlers
   getBusinessPlanOptions() {
     const options = [
       "Yes - I have a written plan",
@@ -1226,8 +1093,13 @@ Type MENU to return.`;
       "I need help creating one"
     ];
     
-    let message = "📊 *BUSINESS PLAN STATUS*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "📊 *BUSINESS PLAN STATUS*\n\n";
+    message += "Do you have a business plan?\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1267,8 +1139,13 @@ Type MENU to return.`;
       "I need help with this"
     ];
     
-    let message = "📈 *FINANCIAL RECORDS*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "📈 *FINANCIAL RECORDS*\n\n";
+    message += "Do you keep financial records?\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1307,8 +1184,13 @@ Type MENU to return.`;
       "No - Need to open business account"
     ];
     
-    let message = "🏦 *BANK STATEMENTS*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "🏦 *BANK STATEMENTS*\n\n";
+    message += "Do you have bank statements?\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1347,8 +1229,13 @@ Type MENU to return.`;
       "I want training opportunities"
     ];
     
-    let message = "🎓 *BUSINESS TRAINING*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "🎓 *BUSINESS TRAINING*\n\n";
+    message += "Have you received any business training?\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1366,7 +1253,7 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select training status:`,
+        response: `❌ ${validation.message}\n\nPlease select business training status:`,
         nextStep: 'readiness_training'
       };
     }
@@ -1388,8 +1275,13 @@ Type MENU to return.`;
       "Not sure what it is"
     ];
     
-    let message = "🤝 *COOPERATIVE INTEREST*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
+    let message = "🤝 *COOPERATIVE INTEREST*\n\n";
+    message += "Are you interested in cooperatives?\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
     message += "\nType the number:";
     
     return message;
@@ -1430,8 +1322,13 @@ Type MENU to return.`;
       "5 - Fully ready (professional operation)"
     ];
     
-    let message = "📊 *SELF-ASSESSMENT READINESS*\n\nPlease select:\n\n";
-    options.forEach((opt, i) => message += `${opt}\n`);
+    let message = "📊 *SELF-ASSESSMENT READINESS*\n\n";
+    message += "Rate your business readiness:\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${option}\n`;
+    });
+    
     message += "\nType the number (1-5):";
     
     return message;
@@ -1450,12 +1347,13 @@ Type MENU to return.`;
     
     if (!validation.valid) {
       return {
-        response: `❌ ${validation.message}\n\nPlease select readiness level:`,
+        response: `❌ ${validation.message}\n\nPlease select readiness level (1-5):`,
         nextStep: 'readiness_self_assessment'
       };
     }
     
-    session.data.readinessAssessment.selfAssessmentReadiness = validation.data ? validation.data.split(' - ')[0] : input;
+    const readinessLevel = validation.data ? validation.data.split(' - ')[0] : input;
+    session.data.readinessAssessment.selfAssessmentReadiness = readinessLevel;
     
     return {
       response: this.getSupportNeedsOptions(),
@@ -1476,9 +1374,14 @@ Type MENU to return.`;
       "Workspace/Premises"
     ];
     
-    let message = "🤝 *SUPPORT NEEDS*\n\nSelect multiple (comma-separated):\n\n";
-    options.forEach((opt, i) => message += `${i+1}. ${opt}\n`);
-    message += "\nExample: 1,3,5 or type names:";
+    let message = "🤝 *SUPPORT NEEDS*\n\n";
+    message += "What support do you need? (Select multiple):\n\n";
+    
+    options.forEach((option, index) => {
+      message += `${index + 1}. ${option}\n`;
+    });
+    
+    message += "\nType the numbers separated by commas (e.g., 1,3,5):";
     
     return message;
   }
@@ -1508,15 +1411,17 @@ Type MENU to return.`;
     session.data.readinessAssessment.supportNeeds = validation.data;
     
     return {
-      response: "✅ Readiness assessment completed!\n\nLet's review your application.",
+      response: "✅ Readiness assessment completed!\n\nLet's review your application before submission.",
       nextStep: 'review_summary'
     };
   }
 
-  // Review and Submit
+  // Review and Submit Handlers
   getApplicationSummary(data) {
-    let summary = "📋 *APPLICATION SUMMARY*\n\nPlease review:\n\n";
+    let summary = "📋 *APPLICATION SUMMARY*\n\n";
+    summary += "Please review your information:\n\n";
     
+    // Personal Information
     summary += "👤 *PERSONAL INFORMATION*\n";
     if (data.personalInfo) {
       summary += `• ID: ${data.personalInfo.idNumber || 'Not provided'}\n`;
@@ -1524,30 +1429,87 @@ Type MENU to return.`;
       summary += `• DOB: ${data.personalInfo.dob ? moment(data.personalInfo.dob).format('DD/MM/YYYY') : 'Not provided'}\n`;
       summary += `• Phone: ${data.personalInfo.phone || 'Not provided'}\n`;
       summary += `• Email: ${data.personalInfo.email || 'Not provided'}\n`;
+    } else {
+      summary += "• Not provided\n";
     }
+    summary += "\n";
     
-    summary += "\n🏢 *BUSINESS INFORMATION*\n";
+    // Business Information
+    summary += "🏢 *BUSINESS INFORMATION*\n";
     if (data.businessInfo) {
-      summary += `• Business: ${data.businessInfo.businessName || 'Not provided'}\n`;
-      summary += `• Trading: ${data.businessInfo.tradingName || 'Not provided'}\n`;
-      summary += `• Type: ${data.businessInfo.businessType || 'Not provided'}\n`;
+      summary += `• Business Name: ${data.businessInfo.businessName || 'Not provided'}\n`;
+      summary += `• Trading Name: ${data.businessInfo.tradingName || 'Not provided'}\n`;
+      summary += `• CIPC: ${data.businessInfo.cipcNumber || 'Not provided'}\n`;
+      summary += `• Sub-Sector: ${data.businessInfo.subSector || 'Not provided'}\n`;
+      summary += `• Business Type: ${data.businessInfo.businessType || 'Not provided'}\n`;
       summary += `• Industry: ${data.businessInfo.industry || 'Not provided'}\n`;
+    } else {
+      summary += "• Not provided\n";
     }
+    summary += "\n";
     
-    summary += "\n📍 *ADDRESS*\n";
+    // Address Information
+    summary += "📍 *ADDRESS INFORMATION*\n";
     if (data.addressInfo) {
-      summary += `• Address: ${data.addressInfo.streetAddress || 'Not provided'}\n`;
+      summary += `• Street: ${data.addressInfo.streetAddress || 'Not provided'}\n`;
+      summary += `• Township: ${data.addressInfo.township || 'Not provided'}\n`;
       summary += `• City: ${data.addressInfo.city || 'Not provided'}\n`;
+      summary += `• District: ${data.addressInfo.district || 'Not provided'}\n`;
       summary += `• Province: ${data.addressInfo.province || 'Not provided'}\n`;
+      summary += `• ZIP: ${data.addressInfo.zipCode || 'Not provided'}\n`;
+    } else {
+      summary += "• Not provided\n";
     }
+    summary += "\n";
     
-    summary += "\n💰 *FUNDING REQUEST*\n";
+    // Employment & Revenue
+    summary += "👥 *EMPLOYMENT & REVENUE*\n";
+    if (data.employmentRevenue) {
+      summary += `• Total Employees: ${data.employmentRevenue.totalEmployees || 'Not provided'}\n`;
+      summary += `• Full-Time: ${data.employmentRevenue.fullTimeCount || 'Not provided'}\n`;
+      summary += `• Part-Time: ${data.employmentRevenue.partTimeCount || 'Not provided'}\n`;
+      summary += `• Years in Operation: ${data.employmentRevenue.yearsInOperation || 'Not provided'}\n`;
+      summary += `• Monthly Revenue: ${data.employmentRevenue.monthlyRevenueRange || 'Not provided'}\n`;
+    } else {
+      summary += "• Not provided\n";
+    }
+    summary += "\n";
+    
+    // Funding Request
+    summary += "💰 *FUNDING REQUEST*\n";
     if (data.fundingRequest) {
       summary += `• Amount: R${data.fundingRequest.fundingAmount?.toLocaleString() || 'Not provided'}\n`;
-      summary += `• Type: ${data.fundingRequest.preferredFundingType || 'Not provided'}\n`;
+      summary += `• Purpose: ${Array.isArray(data.fundingRequest.fundingPurpose) ? data.fundingRequest.fundingPurpose.join(', ') : data.fundingRequest.fundingPurpose || 'Not provided'}\n`;
+      if (data.fundingRequest.otherPurposeDetails) {
+        summary += `• Other Purpose: ${data.fundingRequest.otherPurposeDetails}\n`;
+      }
+      summary += `• Preferred Type: ${data.fundingRequest.preferredFundingType || 'Not provided'}\n`;
+      if (data.fundingRequest.loanRepaymentAbility) {
+        summary += `• Repayment Ability: ${data.fundingRequest.loanRepaymentAbility}\n`;
+      }
+    } else {
+      summary += "• Not provided\n";
     }
+    summary += "\n";
     
-    summary += "\n---\nType *CONFIRM* to submit, *EDIT* to make changes, or *SAVE* to continue later.";
+    // Readiness Assessment
+    summary += "📋 *READINESS ASSESSMENT*\n";
+    if (data.readinessAssessment) {
+      summary += `• Business Plan: ${data.readinessAssessment.businessPlanStatus || 'Not provided'}\n`;
+      summary += `• Financial Records: ${data.readinessAssessment.financialRecords || 'Not provided'}\n`;
+      summary += `• Bank Statements: ${data.readinessAssessment.bankStatements || 'Not provided'}\n`;
+      summary += `• Business Training: ${data.readinessAssessment.businessTraining || 'Not provided'}\n`;
+      summary += `• Cooperative Interest: ${data.readinessAssessment.cooperativeInterest || 'Not provided'}\n`;
+      summary += `• Self-Assessment: ${data.readinessAssessment.selfAssessmentReadiness || 'Not provided'}/5\n`;
+      summary += `• Support Needs: ${Array.isArray(data.readinessAssessment.supportNeeds) ? data.readinessAssessment.supportNeeds.join(', ') : data.readinessAssessment.supportNeeds || 'Not provided'}\n`;
+    } else {
+      summary += "• Not provided\n";
+    }
+    summary += "\n";
+    
+    summary += "Type *CONFIRM* to submit your application\n";
+    summary += "Type *EDIT* to make changes\n";
+    summary += "Type *SAVE* to save and continue later";
     
     return summary;
   }
@@ -1557,18 +1519,19 @@ Type MENU to return.`;
     
     if (normalizedInput === 'confirm') {
       return {
-        response: "Are you sure you want to submit?\n\nType SUBMIT to confirm or BACK to review.",
+        response: "Are you sure you want to submit your application?\n\nType SUBMIT to confirm or BACK to review.",
         nextStep: 'confirm_submission'
       };
     } else if (normalizedInput === 'edit') {
       return {
-        response: "Which section to edit?",
+        response: this.getEditMenu(session.data),
         nextStep: 'edit_menu'
       };
     } else if (normalizedInput === 'save') {
       return {
-        response: "Save progress and continue later?",
-        nextStep: 'save_confirm'
+        response: "Would you like to save your progress and continue later?",
+        nextStep: 'save_confirm',
+        shouldSave: true
       };
     } else {
       return {
@@ -1582,20 +1545,25 @@ Type MENU to return.`;
     const normalizedInput = input.toLowerCase().trim();
     
     if (normalizedInput === 'submit') {
+      session.data.summary = this.getApplicationSummary(session.data);
       session.data.completed = true;
-      session.data.status = 'Submitted';
       session.data.submittedAt = new Date().toISOString();
       
       return {
-        response: `✅ *APPLICATION SUBMITTED!* ✅\n\nThank you! Your application has been received.\n\n📧 Confirmation email will be sent.\n📱 WhatsApp updates will follow.\n⏳ Processing: 7-14 business days.\n\nReference: ${session.id?.substring(0, 8).toUpperCase() || 'N/A'}\n\nSupport: support@fundingsa.org.za\n\nType MENU for new application.`,
+        response: `✅ *APPLICATION SUBMITTED SUCCESSFULLY!* ✅\n\nThank you for submitting your funding application.\n\n📧 You will receive a confirmation email shortly.\n📱 We'll contact you via WhatsApp for updates.\n⏳ Processing time: 7-14 business days.\n\nYour reference number: ${session.id.substring(0, 8).toUpperCase()}\n\nType MENU to start a new application.`,
         nextStep: null,
         shouldSave: true,
         isComplete: true
       };
-    } else {
+    } else if (normalizedInput === 'back') {
       return {
         response: this.getApplicationSummary(session.data),
         nextStep: 'review_summary'
+      };
+    } else {
+      return {
+        response: "Please type SUBMIT to confirm or BACK to review.",
+        nextStep: 'confirm_submission'
       };
     }
   }
@@ -1603,22 +1571,40 @@ Type MENU to return.`;
   handleSaveConfirm(input, session) {
     const normalizedInput = input.toLowerCase().trim();
     
-    if (normalizedInput === 'save') {
+    if (normalizedInput === 'yes') {
       return {
-        response: "✅ Progress saved! You can continue later by messaging us.\n\nSave code: " + (session.id?.substring(0, 8).toUpperCase() || 'N/A') + "\n\nType CONTINUE anytime to resume.",
+        response: `✅ Your application has been saved. You can continue later by messaging us again.\n\nYour reference: ${session.id.substring(0, 8).toUpperCase()}\n\nType CONTINUE anytime to resume.`,
         nextStep: null,
         shouldSave: true
       };
+    } else if (normalizedInput === 'no') {
+      return {
+        response: "Continuing with your application...",
+        nextStep: session.step
+      };
     } else {
       return {
-        response: "Continuing...",
-        nextStep: session.step
+        response: "Please type YES to save or NO to continue.",
+        nextStep: 'save_confirm'
       };
     }
   }
 
   getEditMenu(data) {
-    return "✏️ *EDIT INFORMATION*\n\nWhich section?\n\n1. Personal Information\n2. Business Information\n3. Address Information\n4. Employment & Revenue\n5. Funding Request\n6. Readiness Assessment\n7. Back to Menu\n\nType the number:";
+    let menu = "✏️ *EDIT INFORMATION*\n\n";
+    menu += "Which section would you like to edit?\n\n";
+    
+    menu += "1. Personal Information\n";
+    menu += "2. Business Information\n";
+    menu += "3. Address Information\n";
+    menu += "4. Employment & Revenue\n";
+    menu += "5. Funding Request\n";
+    menu += "6. Readiness Assessment\n";
+    menu += "7. Back to Review\n\n";
+    
+    menu += "Type the number:";
+    
+    return menu;
   }
 
   handleEditMenu(input, session) {
@@ -1626,45 +1612,190 @@ Type MENU to return.`;
     
     switch(normalizedInput) {
       case '1':
-        return { response: "Editing Personal Information. Enter ID:", nextStep: 'personal_id' };
+        return {
+          response: "Editing Personal Information. Please enter your ID number:",
+          nextStep: 'personal_id'
+        };
       case '2':
-        return { response: "Editing Business Information. Enter Business Name:", nextStep: 'business_name' };
+        return {
+          response: "Editing Business Information. Please enter your Business Name:",
+          nextStep: 'business_name'
+        };
       case '3':
-        return { response: "Editing Address Information. Enter Street Address:", nextStep: 'address_street' };
+        return {
+          response: "Editing Address Information. Please enter your Street Address:",
+          nextStep: 'address_street'
+        };
       case '4':
-        return { response: "Editing Employment & Revenue. Enter total employees:", nextStep: 'employment_total' };
+        return {
+          response: "Editing Employment & Revenue. Please enter total employees:",
+          nextStep: 'employment_total'
+        };
       case '5':
-        return { response: "Editing Funding Request. Enter funding amount:", nextStep: 'funding_amount' };
+        return {
+          response: "Editing Funding Request. Please enter funding amount:",
+          nextStep: 'funding_amount'
+        };
       case '6':
-        return { response: "Editing Readiness Assessment.", nextStep: 'readiness_business_plan' };
+        return {
+          response: "Editing Readiness Assessment.",
+          nextStep: 'readiness_business_plan'
+        };
       case '7':
-        return { response: "Returning to menu...", nextStep: 'welcome' };
+        return {
+          response: this.getApplicationSummary(session.data),
+          nextStep: 'review_summary'
+        };
       default:
-        return { response: "Please select 1-7.", nextStep: 'edit_menu' };
+        return {
+          response: "Please select a valid option (1-7).",
+          nextStep: 'edit_menu'
+        };
     }
   }
 
-  handleContinueMenu(input, session) {
-    const normalizedInput = input.toLowerCase().trim();
+  calculateProgress(data) {
+    let completedFields = 0;
+    let totalFields = 0;
     
-    switch(normalizedInput) {
-      case 'personal':
-        return { response: "Continuing Personal Information.", nextStep: 'personal_id' };
-      case 'business':
-        return { response: "Continuing Business Information.", nextStep: 'business_name' };
-      case 'address':
-        return { response: "Continuing Address Information.", nextStep: 'address_street' };
-      case 'employment':
-        return { response: "Continuing Employment & Revenue.", nextStep: 'employment_total' };
-      case 'funding':
-        return { response: "Continuing Funding Request.", nextStep: 'funding_amount' };
-      case 'readiness':
-        return { response: "Continuing Readiness Assessment.", nextStep: 'readiness_business_plan' };
-      case 'review':
-        return { response: "Reviewing application.", nextStep: 'review_summary' };
-      default:
-        return { response: "Please specify section to continue.", nextStep: 'continue_menu' };
+    // Personal Info (5 fields)
+    totalFields += 5;
+    if (data.personalInfo) {
+      completedFields += data.personalInfo.idNumber ? 1 : 0;
+      completedFields += data.personalInfo.fullName ? 1 : 0;
+      completedFields += data.personalInfo.dob ? 1 : 0;
+      completedFields += data.personalInfo.phone ? 1 : 0;
+      completedFields += data.personalInfo.email ? 1 : 0;
     }
+    
+    // Business Info (7 fields)
+    totalFields += 7;
+    if (data.businessInfo) {
+      completedFields += data.businessInfo.businessName ? 1 : 0;
+      completedFields += data.businessInfo.tradingName ? 1 : 0;
+      completedFields += data.businessInfo.cipcNumber !== undefined ? 1 : 0;
+      completedFields += data.businessInfo.subSector ? 1 : 0;
+      completedFields += data.businessInfo.description ? 1 : 0;
+      completedFields += data.businessInfo.businessType ? 1 : 0;
+      completedFields += data.businessInfo.industry ? 1 : 0;
+    }
+    
+    // Address Info (6 fields)
+    totalFields += 6;
+    if (data.addressInfo) {
+      completedFields += data.addressInfo.streetAddress ? 1 : 0;
+      completedFields += data.addressInfo.township ? 1 : 0;
+      completedFields += data.addressInfo.city ? 1 : 0;
+      completedFields += data.addressInfo.district ? 1 : 0;
+      completedFields += data.addressInfo.province ? 1 : 0;
+      completedFields += data.addressInfo.zipCode ? 1 : 0;
+    }
+    
+    // Employment & Revenue (5 fields)
+    totalFields += 5;
+    if (data.employmentRevenue) {
+      completedFields += data.employmentRevenue.totalEmployees !== undefined ? 1 : 0;
+      completedFields += data.employmentRevenue.fullTimeCount !== undefined ? 1 : 0;
+      completedFields += data.employmentRevenue.partTimeCount !== undefined ? 1 : 0;
+      completedFields += data.employmentRevenue.yearsInOperation !== undefined ? 1 : 0;
+      completedFields += data.employmentRevenue.monthlyRevenueRange ? 1 : 0;
+    }
+    
+    // Funding Request (6 fields)
+    totalFields += 6;
+    if (data.fundingRequest) {
+      completedFields += data.fundingRequest.fundingAmount !== undefined ? 1 : 0;
+      completedFields += data.fundingRequest.fundingPurpose ? 1 : 0;
+      completedFields += data.fundingRequest.otherPurposeDetails !== undefined ? 1 : 0;
+      completedFields += data.fundingRequest.preferredFundingType ? 1 : 0;
+      completedFields += data.fundingRequest.loanRepaymentAbility ? 1 : 0;
+      completedFields += data.fundingRequest.justification ? 1 : 0;
+    }
+    
+    // Readiness Assessment (7 fields)
+    totalFields += 7;
+    if (data.readinessAssessment) {
+      completedFields += data.readinessAssessment.businessPlanStatus ? 1 : 0;
+      completedFields += data.readinessAssessment.financialRecords ? 1 : 0;
+      completedFields += data.readinessAssessment.bankStatements ? 1 : 0;
+      completedFields += data.readinessAssessment.businessTraining ? 1 : 0;
+      completedFields += data.readinessAssessment.cooperativeInterest ? 1 : 0;
+      completedFields += data.readinessAssessment.selfAssessmentReadiness ? 1 : 0;
+      completedFields += data.readinessAssessment.supportNeeds ? 1 : 0;
+    }
+    
+    return Math.round((completedFields / totalFields) * 100);
+  }
+
+  getCompletedSections(data) {
+    const sections = {
+      completed: [],
+      incomplete: []
+    };
+    
+    // Check Personal Info
+    if (data.personalInfo && 
+        data.personalInfo.idNumber && 
+        data.personalInfo.fullName && 
+        data.personalInfo.dob && 
+        data.personalInfo.phone && 
+        data.personalInfo.email) {
+      sections.completed.push("✅ Personal Information");
+    } else {
+      sections.incomplete.push("❌ Personal Information");
+    }
+    
+    // Check Business Info
+    if (data.businessInfo && 
+        data.businessInfo.businessName && 
+        data.businessInfo.businessType && 
+        data.businessInfo.industry) {
+      sections.completed.push("✅ Business Information");
+    } else {
+      sections.incomplete.push("❌ Business Information");
+    }
+    
+    // Check Address Info
+    if (data.addressInfo && 
+        data.addressInfo.streetAddress && 
+        data.addressInfo.city && 
+        data.addressInfo.province && 
+        data.addressInfo.zipCode) {
+      sections.completed.push("✅ Address Information");
+    } else {
+      sections.incomplete.push("❌ Address Information");
+    }
+    
+    // Check Employment & Revenue
+    if (data.employmentRevenue && 
+        data.employmentRevenue.totalEmployees !== undefined && 
+        data.employmentRevenue.yearsInOperation !== undefined &&
+        data.employmentRevenue.monthlyRevenueRange) {
+      sections.completed.push("✅ Employment & Revenue");
+    } else {
+      sections.incomplete.push("❌ Employment & Revenue");
+    }
+    
+    // Check Funding Request
+    if (data.fundingRequest && 
+        data.fundingRequest.fundingAmount && 
+        data.fundingRequest.fundingPurpose &&
+        data.fundingRequest.preferredFundingType) {
+      sections.completed.push("✅ Funding Request");
+    } else {
+      sections.incomplete.push("❌ Funding Request");
+    }
+    
+    // Check Readiness Assessment
+    if (data.readinessAssessment && 
+        data.readinessAssessment.businessPlanStatus &&
+        data.readinessAssessment.supportNeeds) {
+      sections.completed.push("✅ Readiness Assessment");
+    } else {
+      sections.incomplete.push("❌ Readiness Assessment");
+    }
+    
+    return sections;
   }
 }
 

@@ -1,0 +1,2 @@
+{"level":"info","message":"Airtable service initialized","tableName":"Applicants","timestamp":"2026-02-12T10:25:36.421Z"}
+{"error":"UNKNOWN_FIELD_NAME","level":"error","message":"Error finding incomplete application: Unknown field name: \"Last Updated\"","statusCode":422,"timestamp":"2026-02-12T10:25:45.157Z"}

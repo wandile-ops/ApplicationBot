@@ -4,7 +4,7 @@ const moment = require('moment');
 require('dotenv').config();
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -26,15 +26,12 @@ class AirtableService {
     }).base(process.env.AIRTABLE_BASE_ID);
     
     this.tableName = 'Applicants';
-    logger.info('Airtable service initialized', { 
-      tableName: this.tableName,
-      baseId: process.env.AIRTABLE_BASE_ID?.substring(0, 10) + '...' 
-    });
+    logger.info('Airtable service initialized', { tableName: this.tableName });
   }
 
   formatApplicationData(sessionData) {
     const data = {
-      // Primary Field (must be first)
+      // Primary Field (South African ID)
       'South African ID': sessionData.personalInfo?.idNumber || '',
       
       // Personal Information
@@ -96,7 +93,7 @@ class AirtableService {
         ? sessionData.readinessAssessment.supportNeeds.join(', ')
         : sessionData.readinessAssessment?.supportNeeds || '',
       
-      // Metadata fields
+      // Metadata
       'WhatsApp Number': sessionData.phoneNumber || '',
       'Session ID': sessionData.sessionId || '',
       'Application Status': sessionData.status || 'Draft',
@@ -128,8 +125,7 @@ class AirtableService {
     try {
       logger.info('Creating new application', { 
         sessionId: data.sessionId,
-        phoneNumber: data.phoneNumber,
-        idNumber: data.personalInfo?.idNumber 
+        phoneNumber: data.phoneNumber
       });
       
       const recordData = this.formatApplicationData(data);
@@ -139,8 +135,7 @@ class AirtableService {
         const existing = await this.findByID(recordData['South African ID']);
         if (existing) {
           logger.warn('Duplicate ID found', { 
-            idNumber: recordData['South African ID'],
-            existingRecordId: existing.id
+            idNumber: recordData['South African ID']
           });
           return this.updateApplication(existing.fields['Session ID'], data);
         }
@@ -149,27 +144,19 @@ class AirtableService {
       const record = await this.base(this.tableName).create(recordData);
       logger.info('Application created successfully', { 
         recordId: record.getId(),
-        sessionId: data.sessionId,
-        idNumber: recordData['South African ID']
+        sessionId: data.sessionId
       });
       
       return record.getId();
     } catch (error) {
-      logger.error('Airtable create error:', {
-        error: error.message,
-        sessionId: data.sessionId,
-        idNumber: data.personalInfo?.idNumber
-      });
+      logger.error('Airtable create error:', error);
       throw error;
     }
   }
 
   async updateApplication(sessionId, data) {
     try {
-      logger.debug('Updating application', { 
-        sessionId, 
-        status: data.status || 'Draft'
-      });
+      logger.debug('Updating application', { sessionId });
       
       const records = await this.base(this.tableName)
         .select({
@@ -188,76 +175,64 @@ class AirtableService {
       
       // Merge data
       const mergedData = {
+        phoneNumber: data.phoneNumber || existingFields['WhatsApp Number'],
+        sessionId: sessionId,
         personalInfo: {
-          idNumber: existingFields['South African ID'] || data.personalInfo?.idNumber,
-          fullName: existingFields['Full Name'] || data.personalInfo?.fullName,
-          dob: existingFields['Date of Birth'] || data.personalInfo?.dob,
-          phone: existingFields['Phone Number'] || data.personalInfo?.phone,
-          email: existingFields['Email Address'] || data.personalInfo?.email,
-          ...data.personalInfo
+          idNumber: data.personalInfo?.idNumber || existingFields['South African ID'],
+          fullName: data.personalInfo?.fullName || existingFields['Full Name'],
+          dob: data.personalInfo?.dob || existingFields['Date of Birth'],
+          phone: data.personalInfo?.phone || existingFields['Phone Number'],
+          email: data.personalInfo?.email || existingFields['Email Address']
         },
         businessInfo: {
-          businessName: existingFields['Business Name'] || data.businessInfo?.businessName,
-          tradingName: existingFields['Trading Name'] || data.businessInfo?.tradingName,
-          businessType: existingFields['Business Type'] || data.businessInfo?.businessType,
-          cipcNumber: existingFields['CIPC Registration Number'] || data.businessInfo?.cipcNumber,
-          industry: existingFields['Industry'] || data.businessInfo?.industry,
-          subSector: existingFields['Sub-Sector'] || data.businessInfo?.subSector,
-          description: existingFields['Business Description'] || data.businessInfo?.description,
-          ...data.businessInfo
+          businessName: data.businessInfo?.businessName || existingFields['Business Name'],
+          tradingName: data.businessInfo?.tradingName || existingFields['Trading Name'],
+          businessType: data.businessInfo?.businessType || existingFields['Business Type'],
+          cipcNumber: data.businessInfo?.cipcNumber || existingFields['CIPC Registration Number'],
+          industry: data.businessInfo?.industry || existingFields['Industry'],
+          subSector: data.businessInfo?.subSector || existingFields['Sub-Sector'],
+          description: data.businessInfo?.description || existingFields['Business Description']
         },
         addressInfo: {
-          streetAddress: existingFields['Street Address'] || data.addressInfo?.streetAddress,
-          township: existingFields['Township'] || data.addressInfo?.township,
-          city: existingFields['City'] || data.addressInfo?.city,
-          district: existingFields['District'] || data.addressInfo?.district,
-          zipCode: existingFields['Zip Code'] || data.addressInfo?.zipCode,
-          province: existingFields['Province'] || data.addressInfo?.province,
-          ...data.addressInfo
+          streetAddress: data.addressInfo?.streetAddress || existingFields['Street Address'],
+          township: data.addressInfo?.township || existingFields['Township'],
+          city: data.addressInfo?.city || existingFields['City'],
+          district: data.addressInfo?.district || existingFields['District'],
+          zipCode: data.addressInfo?.zipCode || existingFields['Zip Code'],
+          province: data.addressInfo?.province || existingFields['Province']
         },
         employmentRevenue: {
-          totalEmployees: existingFields['Total Employees'] || data.employmentRevenue?.totalEmployees,
-          fullTimeCount: existingFields['Full-Time Count'] || data.employmentRevenue?.fullTimeCount,
-          partTimeCount: existingFields['Part-Time Count'] || data.employmentRevenue?.partTimeCount,
-          yearsInOperation: existingFields['Years in Operation'] || data.employmentRevenue?.yearsInOperation,
-          monthlyRevenueRange: existingFields['Monthly Revenue Range'] || data.employmentRevenue?.monthlyRevenueRange,
-          ...data.employmentRevenue
+          totalEmployees: data.employmentRevenue?.totalEmployees || existingFields['Total Employees'],
+          fullTimeCount: data.employmentRevenue?.fullTimeCount || existingFields['Full-Time Count'],
+          partTimeCount: data.employmentRevenue?.partTimeCount || existingFields['Part-Time Count'],
+          yearsInOperation: data.employmentRevenue?.yearsInOperation || existingFields['Years in Operation'],
+          monthlyRevenueRange: data.employmentRevenue?.monthlyRevenueRange || existingFields['Monthly Revenue Range']
         },
         fundingRequest: {
-          fundingAmount: existingFields['Funding Amount ZAR'] || data.fundingRequest?.fundingAmount,
-          fundingPurpose: existingFields['Funding Purpose'] ? 
-            existingFields['Funding Purpose'].split(', ') : data.fundingRequest?.fundingPurpose,
-          otherPurposeDetails: existingFields['Other Purpose Details'] || data.fundingRequest?.otherPurposeDetails,
-          preferredFundingType: existingFields['Preferred Funding Type'] || data.fundingRequest?.preferredFundingType,
-          loanRepaymentAbility: existingFields['Loan Repayment Ability'] || data.fundingRequest?.loanRepaymentAbility,
-          justification: existingFields['Funding Justification'] || data.fundingRequest?.justification,
-          ...data.fundingRequest
+          fundingAmount: data.fundingRequest?.fundingAmount || existingFields['Funding Amount ZAR'],
+          fundingPurpose: data.fundingRequest?.fundingPurpose || (existingFields['Funding Purpose']?.split(', ') || []),
+          otherPurposeDetails: data.fundingRequest?.otherPurposeDetails || existingFields['Other Purpose Details'],
+          preferredFundingType: data.fundingRequest?.preferredFundingType || existingFields['Preferred Funding Type'],
+          loanRepaymentAbility: data.fundingRequest?.loanRepaymentAbility || existingFields['Loan Repayment Ability'],
+          justification: data.fundingRequest?.justification || existingFields['Funding Justification']
         },
         readinessAssessment: {
-          businessPlanStatus: existingFields['Business Plan Status'] || data.readinessAssessment?.businessPlanStatus,
-          financialRecords: existingFields['Financial Records'] || data.readinessAssessment?.financialRecords,
-          bankStatements: existingFields['Bank Statements'] || data.readinessAssessment?.bankStatements,
-          businessTraining: existingFields['Business Training'] || data.readinessAssessment?.businessTraining,
-          cooperativeInterest: existingFields['Cooperative Interest'] || data.readinessAssessment?.cooperativeInterest,
-          selfAssessmentReadiness: existingFields['Self-Assessment Readiness'] || data.readinessAssessment?.selfAssessmentReadiness,
-          supportNeeds: existingFields['Support Needs'] ? 
-            existingFields['Support Needs'].split(', ') : data.readinessAssessment?.supportNeeds,
-          ...data.readinessAssessment
+          businessPlanStatus: data.readinessAssessment?.businessPlanStatus || existingFields['Business Plan Status'],
+          financialRecords: data.readinessAssessment?.financialRecords || existingFields['Financial Records'],
+          bankStatements: data.readinessAssessment?.bankStatements || existingFields['Bank Statements'],
+          businessTraining: data.readinessAssessment?.businessTraining || existingFields['Business Training'],
+          cooperativeInterest: data.readinessAssessment?.cooperativeInterest || existingFields['Cooperative Interest'],
+          selfAssessmentReadiness: data.readinessAssessment?.selfAssessmentReadiness || existingFields['Self-Assessment Readiness'],
+          supportNeeds: data.readinessAssessment?.supportNeeds || (existingFields['Support Needs']?.split(', ') || [])
         },
-        phoneNumber: existingFields['WhatsApp Number'] || data.phoneNumber,
-        sessionId: existingFields['Session ID'] || sessionId,
-        status: data.status || existingFields['Application Status'] || 'Draft',
         consentGiven: data.consentGiven !== undefined ? data.consentGiven : existingFields['Consent Given'],
         consentTimestamp: data.consentTimestamp || existingFields['Consent Timestamp'],
-        completed: data.completed !== undefined ? data.completed : existingFields['Completed']
+        completed: data.completed !== undefined ? data.completed : existingFields['Completed'],
+        status: data.status || existingFields['Application Status'] || 'Draft'
       };
       
       const updateData = this.formatApplicationData(mergedData);
       updateData['Last Updated'] = new Date().toISOString();
-      
-      if (data.status) {
-        updateData['Application Status'] = data.status;
-      }
       
       if (data.completed) {
         updateData['Completed'] = true;
@@ -266,18 +241,11 @@ class AirtableService {
       }
       
       await record.update(updateData);
-      logger.info('Application updated successfully', { 
-        sessionId,
-        recordId: record.id,
-        status: updateData['Application Status']
-      });
+      logger.info('Application updated successfully', { sessionId });
       
       return true;
     } catch (error) {
-      logger.error('Airtable update error:', {
-        error: error.message,
-        sessionId
-      });
+      logger.error('Airtable update error:', error);
       throw error;
     }
   }
@@ -368,10 +336,7 @@ class AirtableService {
       
       return applicationData;
     } catch (error) {
-      logger.error('Airtable get error:', {
-        error: error.message,
-        sessionId
-      });
+      logger.error('Airtable get error:', error);
       throw error;
     }
   }
@@ -390,7 +355,7 @@ class AirtableService {
         fields: records[0].fields
       } : null;
     } catch (error) {
-      logger.error('Error finding by ID:', { idNumber, error: error.message });
+      logger.error('Error finding by ID:', error);
       return null;
     }
   }
@@ -416,76 +381,7 @@ class AirtableService {
         status: record.fields['Application Status']
       };
     } catch (error) {
-      logger.error('Error finding incomplete application:', {
-        error: error.message,
-        phoneNumber
-      });
-      return null;
-    }
-  }
-
-  async markAsCompleted(sessionId) {
-    try {
-      await this.updateApplication(sessionId, {
-        completed: true,
-        status: 'Submitted'
-      });
-      
-      return true;
-    } catch (error) {
-      logger.error('Error marking as completed:', {
-        error: error.message,
-        sessionId
-      });
-      throw error;
-    }
-  }
-
-  async getApplicationStats() {
-    try {
-      const records = await this.base(this.tableName)
-        .select({
-          fields: ['Application Status', 'Application Date', 'Industry', 'Province']
-        })
-        .all();
-      
-      const stats = {
-        total: records.length,
-        draft: 0,
-        inProgress: 0,
-        submitted: 0,
-        byIndustry: {},
-        byProvince: {},
-        byDate: {}
-      };
-      
-      records.forEach(record => {
-        const status = record.get('Application Status') || 'Draft';
-        const date = record.get('Application Date');
-        const industry = record.get('Industry');
-        const province = record.get('Province');
-        
-        if (status === 'Draft') stats.draft++;
-        else if (status === 'In Progress') stats.inProgress++;
-        else if (status === 'Submitted') stats.submitted++;
-        
-        if (date) {
-          const dateStr = moment(date).format('YYYY-MM-DD');
-          stats.byDate[dateStr] = (stats.byDate[dateStr] || 0) + 1;
-        }
-        
-        if (industry) {
-          stats.byIndustry[industry] = (stats.byIndustry[industry] || 0) + 1;
-        }
-        
-        if (province) {
-          stats.byProvince[province] = (stats.byProvince[province] || 0) + 1;
-        }
-      });
-      
-      return stats;
-    } catch (error) {
-      logger.error('Error getting application stats:', error);
+      logger.error('Error finding incomplete application:', error);
       return null;
     }
   }
@@ -498,21 +394,16 @@ class AirtableService {
         })
         .firstPage();
       
-      const fieldNames = records.length > 0 ? Object.keys(records[0].fields) : [];
-      
       return {
         connected: true,
         tableName: this.tableName,
-        hasRecords: records.length > 0,
-        sampleFields: fieldNames.slice(0, 10),
-        fieldCount: fieldNames.length
+        hasRecords: records.length > 0
       };
     } catch (error) {
       logger.error('Airtable connection test failed:', error);
       return {
         connected: false,
-        error: error.message,
-        tableName: this.tableName
+        error: error.message
       };
     }
   }
@@ -529,12 +420,7 @@ class AirtableService {
         return { fields: [] };
       }
       
-      const fields = Object.keys(records[0].fields).map(fieldName => ({
-        name: fieldName,
-        sampleValue: records[0].fields[fieldName],
-        type: typeof records[0].fields[fieldName]
-      }));
-      
+      const fields = Object.keys(records[0].fields);
       return {
         fields: fields,
         count: fields.length

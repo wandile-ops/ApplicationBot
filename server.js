@@ -30,10 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`, {
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
+  logger.info(`${req.method} ${req.url}`);
   next();
 });
 
@@ -68,8 +65,7 @@ app.get('/webhook', (req, res) => {
 app.post('/webhook', async (req, res) => {
   try {
     logger.debug('Received webhook', { 
-      body: req.body,
-      headers: req.headers 
+      bodyLength: JSON.stringify(req.body).length 
     });
     
     const body = req.body;
@@ -100,12 +96,20 @@ app.post('/webhook', async (req, res) => {
         logger.info('Processing message', { 
           from, 
           messageType, 
-          messageBody: messageBody.substring(0, 100) 
+          messageLength: messageBody.length 
         });
         
         // Handle the message asynchronously
         whatsappHandler.handleMessage(from, messageBody).catch(err => {
           logger.error('Error in message handling:', err);
+        });
+      } else if (value?.statuses) {
+        // Handle message delivery status
+        const status = value.statuses[0];
+        logger.debug('Message status update', {
+          to: status.recipient_id,
+          status: status.status,
+          messageId: status.id
         });
       }
     }
@@ -119,22 +123,35 @@ app.post('/webhook', async (req, res) => {
 
 // API endpoints for testing and management
 app.get('/api/sessions', (req, res) => {
-  const sessions = Array.from(sessionManager.sessions.entries()).map(([id, session]) => ({
-    id,
-    phoneNumber: session.phoneNumber,
-    step: session.step,
-    lastActivity: new Date(session.lastActivity).toISOString(),
-    dataSummary: {
-      hasPersonalInfo: !!session.data.personalInfo?.idNumber,
-      hasBusinessInfo: !!session.data.businessInfo?.businessName,
-      hasAddressInfo: !!session.data.addressInfo?.streetAddress
+  const sessions = sessionManager.getStats();
+  res.json({ 
+    success: true, 
+    sessions: sessions,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/sessions/:phone', (req, res) => {
+  const { phone } = req.params;
+  let sessionInfo = null;
+  
+  // Find session by phone number
+  for (const [sessionId, session] of sessionManager.sessions.entries()) {
+    if (session.phoneNumber === phone) {
+      sessionInfo = {
+        sessionId,
+        step: session.step,
+        lastActivity: new Date(session.lastActivity).toISOString(),
+        data: session.data
+      };
+      break;
     }
-  }));
+  }
   
   res.json({ 
-    sessions, 
-    count: sessions.length,
-    timestamp: new Date().toISOString()
+    success: true, 
+    session: sessionInfo,
+    exists: sessionInfo !== null
   });
 });
 
@@ -151,8 +168,7 @@ app.post('/api/send-test', async (req, res) => {
     await whatsappHandler.sendMessage(phoneNumber, message);
     res.json({ 
       success: true, 
-      message: 'Test message sent',
-      to: phoneNumber
+      message: 'Test message sent' 
     });
   } catch (error) {
     logger.error('Test message error:', error);
@@ -163,49 +179,79 @@ app.post('/api/send-test', async (req, res) => {
   }
 });
 
-// Test Airtable connection
+// Debug endpoints
+app.get('/api/debug/sessions', (req, res) => {
+  const sessions = sessionManager.getStats();
+  res.json({
+    success: true,
+    sessions: sessions,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post('/api/debug/reset-session/:phoneNumber', async (req, res) => {
+  try {
+    const { phoneNumber } = req.params;
+    
+    // Find and delete session
+    let deleted = false;
+    for (const [sessionId, session] of sessionManager.sessions.entries()) {
+      if (session.phoneNumber === phoneNumber) {
+        sessionManager.deleteSession(sessionId);
+        deleted = true;
+        break;
+      }
+    }
+    
+    res.json({
+      success: true,
+      deleted: deleted,
+      phoneNumber: phoneNumber,
+      message: deleted ? 'Session deleted' : 'No session found'
+    });
+  } catch (error) {
+    logger.error('Debug reset error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Airtable test endpoints
 app.get('/api/test-airtable', async (req, res) => {
   try {
     const connectionTest = await airtableService.testConnection();
     const stats = await airtableService.getApplicationStats();
-    const schema = await airtableService.getTableSchema();
     
     res.json({
       success: true,
-      timestamp: new Date().toISOString(),
       connection: connectionTest,
       stats: stats,
-      schema: schema
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     logger.error('Airtable test error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
+      error: error.message
     });
   }
 });
 
-// Get application by session ID
-app.get('/api/applications/:sessionId', async (req, res) => {
+app.get('/api/schema', async (req, res) => {
   try {
-    const { sessionId } = req.params;
-    const application = await airtableService.getApplication(sessionId);
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
+    const schema = await airtableService.getTableSchema();
+    const connection = await airtableService.testConnection();
     
     res.json({
       success: true,
-      application: application
+      connection: connection,
+      schema: schema,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Get application error:', error);
+    logger.error('Schema test error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -216,35 +262,55 @@ app.get('/api/applications/:sessionId', async (req, res) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
+    success: true,
     status: 'ok', 
     timestamp: new Date().toISOString(),
     service: 'whatsapp-funding-bot',
     version: '1.0.0',
-    environment: process.env.NODE_ENV,
-    uptime: process.uptime()
+    environment: process.env.NODE_ENV
   });
 });
 
-// Clear expired sessions periodically
-setInterval(() => {
-  sessionManager.cleanup();
-  logger.debug('Session cleanup completed');
-}, 3600000); // Every hour
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'WhatsApp Funding Bot API',
+    endpoints: {
+      health: '/health',
+      webhook: '/webhook',
+      sessions: '/api/sessions',
+      testAirtable: '/api/test-airtable',
+      schema: '/api/schema',
+      sendTest: '/api/send-test (POST)'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    path: req.path
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  logger.error('Application error:', err);
+  res.status(500).json({
+    success: false,
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
 
 // Start server
 app.listen(PORT, () => {
   logger.info(`WhatsApp bot server running on port ${PORT}`);
   logger.info(`Webhook URL: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/webhook`);
   logger.info(`Health check: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/health`);
-  
-  // Test Airtable connection on startup
-  airtableService.testConnection().then(result => {
-    if (result.connected) {
-      logger.info('Airtable connection established successfully');
-    } else {
-      logger.error('Airtable connection failed:', result.error);
-    }
-  });
 });
 
 // Handle uncaught exceptions
@@ -256,3 +322,8 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+// Clear expired sessions periodically
+setInterval(() => {
+  sessionManager.cleanup();
+}, 300000); // Every 5 minutes

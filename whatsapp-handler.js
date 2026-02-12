@@ -6,7 +6,7 @@ const winston = require('winston');
 require('dotenv').config();
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -25,25 +25,36 @@ class WhatsAppHandler {
     this.phoneId = process.env.WHATSAPP_PHONE_ID;
     this.apiVersion = 'v18.0';
     this.baseUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneId}/messages`;
-    
-    if (!this.whatsappToken || !this.phoneId) {
-      logger.warn('WhatsApp credentials not configured');
-    }
   }
 
   async handleMessage(from, message) {
     try {
-      logger.info('Handling message', { from, message: message?.substring(0, 100) || 'empty' });
+      logger.info('Handling message', { from, message });
       
+      // Handle empty or greeting messages
+      if (!message || message.trim().length === 0) {
+        await this.sendWelcomeMessage(from);
+        return;
+      }
+      
+      const normalizedMessage = message.toLowerCase().trim();
+      
+      // Handle initial greetings
+      if (this.isGreeting(normalizedMessage)) {
+        await this.sendWelcomeMessage(from);
+        return;
+      }
+      
+      // Get or create session
       const sessionId = await sessionManager.getOrCreateSession(from);
       const session = sessionManager.getSession(sessionId);
       
       if (!session) {
-        await this.sendMessage(from, "Session expired. Please type START to begin.");
+        await this.sendMessage(from, "Your session has expired. Please type *START* to begin a new application.");
         return;
       }
 
-      // Handle global commands
+      // Process the message
       const response = await this.processMessage(session, message);
       
       // Update session
@@ -51,46 +62,9 @@ class WhatsAppHandler {
         sessionManager.updateSession(sessionId, { step: response.nextStep });
       }
       
-      // Update session data if provided
-      if (response.updateData) {
-        sessionManager.updateSessionData(sessionId, response.updateData);
-      }
-      
       // Save to Airtable if needed
-      if (response.shouldSave) {
-        try {
-          const airtableData = {
-            phoneNumber: from,
-            sessionId: sessionId,
-            ...session.data,
-            status: response.isComplete ? 'Submitted' : 'In Progress'
-          };
-          
-          const existingApp = await airtableService.getApplication(sessionId);
-          
-          if (existingApp) {
-            await airtableService.updateApplication(sessionId, {
-              ...session.data,
-              status: response.isComplete ? 'Submitted' : 'In Progress',
-              completed: response.isComplete || false
-            });
-          } else {
-            await airtableService.createApplication(airtableData);
-          }
-          
-          logger.info('Saved to Airtable', { 
-            sessionId, 
-            from,
-            status: response.isComplete ? 'Submitted' : 'In Progress',
-            isComplete: response.isComplete
-          });
-        } catch (error) {
-          logger.error('Airtable save error:', {
-            error: error.message,
-            sessionId,
-            from
-          });
-        }
+      if (response.shouldSave || response.nextStep === null) {
+        await this.saveToAirtable(sessionId, from, session.data, response);
       }
       
       // Send response
@@ -98,17 +72,40 @@ class WhatsAppHandler {
       
     } catch (error) {
       logger.error('Error handling message:', error);
-      await this.sendMessage(from, "Sorry, an error occurred. Please try again or type HELP.");
+      await this.sendMessage(from, 
+        "Sorry, something went wrong. Please try again or type HELP for assistance."
+      );
     }
+  }
+
+  isGreeting(message) {
+    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
+    return greetings.includes(message);
+  }
+
+  async sendWelcomeMessage(to) {
+    const message = 
+      "👋 *Hello! Welcome to the Funding Application Bot*\n\n" +
+      "I'm here to help you apply for business funding.\n\n" +
+      "To get started, type: *START*\n" +
+      "For help, type: *HELP*\n\n" +
+      "You can save your progress at any time and return later.";
+    
+    await this.sendMessage(to, message);
   }
 
   async processMessage(session, message) {
     const step = session.step;
-    const normalizedMessage = (message || '').toLowerCase().trim();
+    const normalizedMessage = message.toLowerCase().trim();
     
     // Handle global commands
     if (this.isGlobalCommand(normalizedMessage)) {
       return this.handleGlobalCommand(normalizedMessage, session);
+    }
+    
+    // Handle consent step
+    if (step === 'consent') {
+      return this.handleConsentStep(normalizedMessage, session);
     }
     
     // Process based on current step
@@ -119,17 +116,41 @@ class WhatsAppHandler {
     const globalCommands = [
       'menu', 'help', 'save', 'exit', 'restart', 
       'start', 'continue', 'progress', 'edit',
-      'back', 'cancel', 'hello', 'hi'
+      'back', 'cancel'
     ];
     
     return globalCommands.includes(message);
+  }
+
+  handleConsentStep(message, session) {
+    if (message === 'agree') {
+      session.data.consentGiven = true;
+      session.data.consentTimestamp = new Date().toISOString();
+      
+      return {
+        response: "✅ Thank you for your consent. Let's begin your funding application!\n\n" +
+                 "You can type *SAVE* at any time to save your progress and continue later.\n" +
+                 "Type *MENU* to see available options at any time.",
+        nextStep: 'personal_id'
+      };
+    } else if (message === 'exit') {
+      return {
+        response: "Application cancelled. Your data has not been saved. If you change your mind, simply send us a message to start again.",
+        nextStep: null
+      };
+    } else {
+      return {
+        response: questionFlows.getConsentMessage(),
+        nextStep: 'consent'
+      };
+    }
   }
 
   handleGlobalCommand(command, session) {
     switch(command) {
       case 'menu':
         return {
-          response: questionFlows.getQuestion('welcome', session),
+          response: questionFlows.getWelcomeMenu(session),
           nextStep: 'welcome'
         };
       case 'help':
@@ -139,14 +160,13 @@ class WhatsAppHandler {
         };
       case 'save':
         return {
-          response: "Would you like to save your progress?",
-          nextStep: 'save_confirm',
-          shouldSave: true
+          response: "Would you like to save your progress and continue later? Type YES to save or NO to continue.",
+          nextStep: 'save_confirm'
         };
       case 'exit':
       case 'cancel':
         return {
-          response: "Application cancelled. Type START to begin again.",
+          response: "Application cancelled. Your data has not been saved. Type START to begin again.",
           nextStep: null
         };
       case 'restart':
@@ -159,108 +179,99 @@ class WhatsAppHandler {
           readinessAssessment: {},
           consentGiven: false
         };
+        sessionManager.updateSessionData(session.id, session.data);
         return {
-          response: "Application restarted. Let's begin.",
+          response: "Application restarted. Let's begin from the beginning.",
           nextStep: 'consent'
         };
       case 'start':
-      case 'hello':
-      case 'hi':
-        if (session.data.personalInfo?.idNumber) {
+        if (session.data.consentGiven) {
           return {
-            response: questionFlows.getQuestion('welcome', session),
+            response: "Let's continue your application.",
             nextStep: 'welcome'
           };
         } else {
           return {
-            response: "Starting new application...",
+            response: questionFlows.getConsentMessage(),
             nextStep: 'consent'
           };
         }
       case 'continue':
         const progress = questionFlows.calculateProgress(session.data);
         if (progress === 0) {
-          return {
-            response: "No application in progress. Type START to begin.",
-            nextStep: 'consent'
-          };
+          if (!session.data.consentGiven) {
+            return {
+              response: questionFlows.getConsentMessage(),
+              nextStep: 'consent'
+            };
+          } else {
+            return {
+              response: "Let's start with your personal information.",
+              nextStep: 'personal_id'
+            };
+          }
         } else {
           return {
-            response: `Resuming application (${progress}% complete).`,
+            response: `Resuming your application (${progress}% complete).`,
             nextStep: session.step
           };
         }
       case 'progress':
         const progressPercent = questionFlows.calculateProgress(session.data);
+        const sections = questionFlows.getCompletedSections(session.data);
+        
+        let response = `📊 *APPLICATION PROGRESS*\n\n`;
+        response += `Overall Completion: ${progressPercent}%\n\n`;
+        response += `*Completed Sections:*\n`;
+        response += sections.completed.join('\n') + '\n\n';
+        
+        if (sections.incomplete.length > 0) {
+          response += `*Remaining Sections:*\n`;
+          response += sections.incomplete.join('\n') + '\n\n';
+        }
+        
+        response += `Type CONTINUE to resume where you left off.`;
+        
         return {
-          response: `📊 Progress: ${progressPercent}% complete\n\nType CONTINUE to resume.`,
+          response: response,
           nextStep: session.step
         };
-      case 'edit':
-        return {
-          response: "Which section would you like to edit?",
-          nextStep: 'edit_menu'
-        };
-      case 'back':
-        return this.handleBackNavigation(session);
       default:
         return {
-          response: "Command not recognized. Type HELP for commands.",
+          response: "Command not recognized. Type HELP for available commands.",
           nextStep: session.step
         };
     }
   }
 
-  handleBackNavigation(session) {
-    const stepHierarchy = {
-      'personal_name': 'personal_id',
-      'personal_dob': 'personal_name',
-      'personal_dob_confirm': 'personal_name',
-      'personal_phone': 'personal_dob',
-      'personal_email': 'personal_phone',
-      'business_trading': 'business_name',
-      'business_trading_name': 'business_trading',
-      'business_type': 'business_trading_name',
-      'business_cipc': 'business_type',
-      'business_industry': 'business_cipc',
-      'business_sub_sector': 'business_industry',
-      'business_description': 'business_sub_sector',
-      'address_township': 'address_street',
-      'address_city': 'address_township',
-      'address_district': 'address_city',
-      'address_province': 'address_district',
-      'address_zip': 'address_province',
-      'employment_fulltime': 'employment_total',
-      'employment_parttime': 'employment_fulltime',
-      'employment_years': 'employment_parttime',
-      'employment_revenue': 'employment_years',
-      'funding_purpose': 'funding_amount',
-      'funding_other_purpose': 'funding_purpose',
-      'funding_type': 'funding_other_purpose',
-      'funding_repayment': 'funding_type',
-      'funding_justification': 'funding_repayment',
-      'readiness_financial_records': 'readiness_business_plan',
-      'readiness_bank_statements': 'readiness_financial_records',
-      'readiness_training': 'readiness_bank_statements',
-      'readiness_cooperative': 'readiness_training',
-      'readiness_self_assessment': 'readiness_cooperative',
-      'readiness_support_needs': 'readiness_self_assessment',
-      'review_summary': 'readiness_support_needs',
-      'confirm_submission': 'review_summary'
-    };
-    
-    const previousStep = stepHierarchy[session.step];
-    
-    if (previousStep) {
-      return {
-        response: `Going back...`,
-        nextStep: previousStep
+  async saveToAirtable(sessionId, from, sessionData, response) {
+    try {
+      const airtableData = {
+        phoneNumber: from,
+        sessionId: sessionId,
+        ...sessionData
       };
-    } else {
-      return {
-        response: "Cannot go back from here. Type MENU for options.",
-        nextStep: session.step
-      };
+      
+      const existingApp = await airtableService.getApplication(sessionId);
+      
+      if (existingApp) {
+        await airtableService.updateApplication(sessionId, {
+          ...sessionData,
+          status: response.isComplete ? 'Submitted' : 'In Progress'
+        });
+      } else {
+        await airtableService.createApplication({
+          ...airtableData,
+          status: response.isComplete ? 'Submitted' : 'In Progress'
+        });
+      }
+      
+      logger.info('Application saved to Airtable', { 
+        sessionId, 
+        status: response.isComplete ? 'Submitted' : 'In Progress'
+      });
+    } catch (error) {
+      logger.error('Error saving to Airtable:', error);
     }
   }
 
@@ -290,21 +301,18 @@ class WhatsAppHandler {
         };
   
         await axios.post(this.baseUrl, payload, { headers });
+        logger.debug('Message sent successfully', { to, length: msg.length });
         
-        // Small delay between messages
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {
-      logger.error('Error sending WhatsApp message:', {
-        error: error.message,
-        status: error.response?.status
-      });
+      logger.error('Error sending WhatsApp message:', error);
     }
   }
 
   splitMessage(message, maxLength = 4000) {
-    if (message.length <= maxLength) {
-      return [message];
+    if (!message || message.length <= maxLength) {
+      return [message || ''];
     }
     
     const messages = [];

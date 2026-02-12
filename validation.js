@@ -17,27 +17,7 @@ class ValidationService {
       return { valid: false, message: 'ID number must contain only digits' };
     }
     
-    let sum = 0;
-    let even = false;
-    
-    for (let i = cleanId.length - 1; i >= 0; i--) {
-      let digit = parseInt(cleanId.charAt(i), 10);
-      
-      if (even) {
-        digit *= 2;
-        if (digit > 9) {
-          digit -= 9;
-        }
-      }
-      
-      sum += digit;
-      even = !even;
-    }
-    
-    if ((sum % 10) !== 0) {
-      return { valid: false, message: 'Invalid ID number format' };
-    }
-    
+    // Extract date of birth from ID
     const yearPrefix = parseInt(cleanId.substring(0, 2), 10);
     const month = parseInt(cleanId.substring(2, 4), 10);
     const day = parseInt(cleanId.substring(4, 6), 10);
@@ -86,18 +66,6 @@ class ValidationService {
       return { valid: false, message: 'Please enter a valid email address' };
     }
     
-    const domain = email.split('@')[1];
-    const allowedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
-    
-    if (!allowedDomains.includes(domain.toLowerCase()) && 
-        !domain.toLowerCase().endsWith('.co.za') && 
-        !domain.toLowerCase().includes('.ac.za')) {
-      return { 
-        valid: false, 
-        message: 'Please use a valid email provider or South African domain' 
-      };
-    }
-    
     return { valid: true, message: 'Valid email' };
   }
 
@@ -132,8 +100,8 @@ class ValidationService {
       valid: true,
       message: 'Valid phone number',
       data: {
-        formatted: `+${formattedPhone}`,
-        whatsappFormat: formattedPhone
+        original: phone,
+        formatted: `+${formattedPhone}`
       }
     };
   }
@@ -147,7 +115,7 @@ class ValidationService {
     const date = moment(dob, formats, true);
     
     if (!date.isValid()) {
-      return { valid: false, message: 'Please enter date in format DD/MM/YYYY (e.g., 15/01/1990)' };
+      return { valid: false, message: 'Please enter date in format DD/MM/YYYY' };
     }
     
     if (date.isAfter(moment())) {
@@ -156,7 +124,7 @@ class ValidationService {
     
     const age = moment().diff(date, 'years');
     if (age < 16) {
-      return { valid: false, message: 'You must be at least 16 years old to apply' };
+      return { valid: false, message: 'You must be at least 16 years old' };
     }
     
     if (age > 120) {
@@ -175,7 +143,7 @@ class ValidationService {
 
   static validateName(name) {
     if (!name || name.trim().length < 2) {
-      return { valid: false, message: 'Name is required and must be at least 2 characters' };
+      return { valid: false, message: 'Name must be at least 2 characters' };
     }
     
     if (name.length > 100) {
@@ -191,7 +159,7 @@ class ValidationService {
 
   static validateBusinessName(name) {
     if (!name || name.trim().length < 2) {
-      return { valid: false, message: 'Business name is required and must be at least 2 characters' };
+      return { valid: false, message: 'Business name must be at least 2 characters' };
     }
     
     if (name.length > 200) {
@@ -202,7 +170,7 @@ class ValidationService {
   }
 
   static validateCIPC(cipc) {
-    if (!cipc || cipc.toLowerCase() === 'skip') {
+    if (!cipc) {
       return { valid: true, message: 'No CIPC provided (optional)' };
     }
     
@@ -210,7 +178,7 @@ class ValidationService {
     const pattern = /^[A-Z]{2}\d{4}\/\d{6}\/\d{2}$/;
     
     if (!pattern.test(cleanCIPC)) {
-      return { valid: false, message: 'Please enter CIPC in format: CK2012/123456/07 or type SKIP' };
+      return { valid: false, message: 'Please enter CIPC in format: CK2012/123456/07' };
     }
     
     return { valid: true, message: 'Valid CIPC number' };
@@ -238,35 +206,18 @@ class ValidationService {
     return { valid: true, message: 'Valid number', data: num };
   }
 
-  static validateCurrencyAmount(amount, min = 1000, max = 10000000) {
-    if (!amount && amount !== 0) {
-      return { valid: false, message: 'Funding amount is required' };
-    }
+  static validateFundingAmount(amount) {
+    const validation = this.validateNumber(amount, 1000, 10000000);
     
-    const cleanAmount = String(amount).replace(/[R$,]/g, '').trim();
-    const num = parseFloat(cleanAmount);
-    
-    if (isNaN(num)) {
-      return { valid: false, message: 'Please enter a valid amount (numbers only)' };
-    }
-    
-    if (num < min) {
-      return { valid: false, message: `Funding amount must be at least R${min.toLocaleString()}` };
-    }
-    
-    if (num > max) {
-      return { valid: false, message: `Funding amount must be less than R${max.toLocaleString()}` };
+    if (!validation.valid) {
+      return validation;
     }
     
     return {
       valid: true,
       message: 'Valid funding amount',
-      data: num
+      data: validation.data
     };
-  }
-
-  static validateFundingAmount(amount) {
-    return this.validateCurrencyAmount(amount, 1000, 10000000);
   }
 
   static validateYearsInOperation(years) {
@@ -317,13 +268,7 @@ class ValidationService {
     const cleanZip = zip.replace(/\s/g, '');
     
     if (!/^\d{4}$/.test(cleanZip)) {
-      return { valid: false, message: 'ZIP code must be 4 digits (e.g., 2000)' };
-    }
-    
-    const zipNum = parseInt(cleanZip, 10);
-    
-    if (zipNum < 1 || zipNum > 9999) {
-      return { valid: false, message: 'Please enter a valid South African postal code' };
+      return { valid: false, message: 'ZIP code must be 4 digits' };
     }
     
     return { valid: true, message: 'Valid ZIP code', data: cleanZip };
@@ -338,7 +283,8 @@ class ValidationService {
     const normalizedOptions = options.map(opt => opt.toLowerCase().trim());
     
     if (normalizedOptions.includes(normalizedInput)) {
-      return { valid: true, message: 'Valid selection' };
+      const index = normalizedOptions.indexOf(normalizedInput);
+      return { valid: true, message: 'Valid selection', data: options[index] };
     }
     
     const num = parseInt(normalizedInput, 10);
@@ -352,27 +298,33 @@ class ValidationService {
     
     return { 
       valid: false, 
-      message: `Please select one of: ${options.join(', ')}` 
+      message: `Please select from: ${options.join(', ')}` 
     };
   }
 
   static validateMultipleSelections(input, options) {
     if (!input) {
-      return { valid: true, message: 'No selections made (optional)' };
+      return { valid: true, message: 'No selections made', data: [] };
     }
     
     const selections = input.split(',').map(s => s.trim()).filter(s => s);
     const validSelections = [];
+    const invalidSelections = [];
     
     for (const selection of selections) {
-      const normalizedSelection = selection.toLowerCase();
-      const foundOption = options.find(opt => 
-        opt.toLowerCase().includes(normalizedSelection) || 
-        normalizedSelection.includes(opt.toLowerCase())
-      );
-      
-      if (foundOption) {
-        validSelections.push(foundOption);
+      const num = parseInt(selection, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        validSelections.push(options[num - 1]);
+      } else {
+        const matchingOption = options.find(opt => 
+          opt.toLowerCase().includes(selection.toLowerCase()) ||
+          selection.toLowerCase().includes(opt.toLowerCase())
+        );
+        if (matchingOption) {
+          validSelections.push(matchingOption);
+        } else {
+          invalidSelections.push(selection);
+        }
       }
     }
     
@@ -383,10 +335,12 @@ class ValidationService {
       };
     }
     
+    const uniqueSelections = [...new Set(validSelections)];
+    
     return { 
       valid: true, 
       message: 'Valid selections',
-      data: validSelections
+      data: uniqueSelections
     };
   }
 
