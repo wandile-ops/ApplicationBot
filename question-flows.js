@@ -1523,7 +1523,7 @@ Type MENU to return to the main menu.`;
     }
   }
 
-  // ============ READINESS ASSESSMENT ============
+// ============ READINESS ASSESSMENT ============
   
   getBusinessPlanOptions() {
     const options = [
@@ -1540,7 +1540,7 @@ Type MENU to return to the main menu.`;
       message += `${index + 1}. ${option}\n`;
     });
     
-    message += "\nType the number:";
+    message += "\nType the number (1-4) or the option text:";
     
     return message;
   }
@@ -1554,29 +1554,80 @@ Type MENU to return to the main menu.`;
         "I need help creating one"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      // Normalize input
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input (1-4)
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = options[num - 1];
+        
         return {
-          response: `❌ ${validation.message}\n\nPlease select business plan status:`,
-          nextStep: 'readiness_business_plan'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
         };
       }
       
-      if (!session.data.readinessAssessment) {
-        session.data.readinessAssessment = {};
+      // Check for exact matches
+      const exactMatch = options.find(opt => opt.toLowerCase() === normalizedInput);
+      if (exactMatch) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = exactMatch;
+        
+        return {
+          response: `✅ Selected: ${exactMatch}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
+        };
       }
       
-      session.data.readinessAssessment.businessPlanStatus = validation.data || input;
+      // Check for partial matches
+      if (normalizedInput.includes('written')) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = options[0]; // Yes - I have a written plan
+        return {
+          response: `✅ Selected: ${options[0]}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
+        };
+      }
       
+      if (normalizedInput.includes('basic') || normalizedInput.includes('not written')) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = options[1]; // Yes - I have a basic plan
+        return {
+          response: `✅ Selected: ${options[1]}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
+        };
+      }
+      
+      if (normalizedInput.includes('no') && !normalizedInput.includes('help')) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = options[2]; // No - I don't have one
+        return {
+          response: `✅ Selected: ${options[2]}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
+        };
+      }
+      
+      if (normalizedInput.includes('help') || normalizedInput.includes('need')) {
+        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        session.data.readinessAssessment.businessPlanStatus = options[3]; // I need help creating one
+        return {
+          response: `✅ Selected: ${options[3]}\n\n` + this.getFinancialRecordsOptions(),
+          nextStep: 'readiness_financial_records'
+        };
+      }
+      
+      // If we get here, no match found
       return {
-        response: this.getFinancialRecordsOptions(),
-        nextStep: 'readiness_financial_records'
+        response: `❌ Please select a valid option:\n\n` + this.getBusinessPlanOptions(),
+        nextStep: 'readiness_business_plan'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessBusinessPlan:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error processing your response. Please try again.\n\n" + this.getBusinessPlanOptions(),
         nextStep: 'readiness_business_plan'
       };
     }
@@ -1597,7 +1648,7 @@ Type MENU to return to the main menu.`;
       message += `${index + 1}. ${option}\n`;
     });
     
-    message += "\nType the number:";
+    message += "\nType the number (1-4) or the option text:";
     
     return message;
   }
@@ -1611,25 +1662,60 @@ Type MENU to return to the main menu.`;
         "I need help with this"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment.financialRecords = options[num - 1];
         return {
-          response: `❌ ${validation.message}\n\nPlease select financial records status:`,
-          nextStep: 'readiness_financial_records'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getBankStatementsOptions(),
+          nextStep: 'readiness_bank_statements'
         };
       }
       
-      session.data.readinessAssessment.financialRecords = validation.data || input;
+      // Check for partial matches
+      if (normalizedInput.includes('detailed')) {
+        session.data.readinessAssessment.financialRecords = options[0];
+        return {
+          response: `✅ Selected: ${options[0]}\n\n` + this.getBankStatementsOptions(),
+          nextStep: 'readiness_bank_statements'
+        };
+      }
+      
+      if (normalizedInput.includes('basic') || normalizedInput.includes('notebook')) {
+        session.data.readinessAssessment.financialRecords = options[1];
+        return {
+          response: `✅ Selected: ${options[1]}\n\n` + this.getBankStatementsOptions(),
+          nextStep: 'readiness_bank_statements'
+        };
+      }
+      
+      if (normalizedInput === 'no' || normalizedInput.includes('no records')) {
+        session.data.readinessAssessment.financialRecords = options[2];
+        return {
+          response: `✅ Selected: ${options[2]}\n\n` + this.getBankStatementsOptions(),
+          nextStep: 'readiness_bank_statements'
+        };
+      }
+      
+      if (normalizedInput.includes('help')) {
+        session.data.readinessAssessment.financialRecords = options[3];
+        return {
+          response: `✅ Selected: ${options[3]}\n\n` + this.getBankStatementsOptions(),
+          nextStep: 'readiness_bank_statements'
+        };
+      }
       
       return {
-        response: this.getBankStatementsOptions(),
-        nextStep: 'readiness_bank_statements'
+        response: `❌ Please select a valid option:\n\n` + this.getFinancialRecordsOptions(),
+        nextStep: 'readiness_financial_records'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessFinancialRecords:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please try again.\n\n" + this.getFinancialRecordsOptions(),
         nextStep: 'readiness_financial_records'
       };
     }
@@ -1650,7 +1736,7 @@ Type MENU to return to the main menu.`;
       message += `${index + 1}. ${option}\n`;
     });
     
-    message += "\nType the number:";
+    message += "\nType the number (1-4) or the option text:";
     
     return message;
   }
@@ -1664,25 +1750,60 @@ Type MENU to return to the main menu.`;
         "No - Need to open business account"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment.bankStatements = options[num - 1];
         return {
-          response: `❌ ${validation.message}\n\nPlease select bank statements status:`,
-          nextStep: 'readiness_bank_statements'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getTrainingOptions(),
+          nextStep: 'readiness_training'
         };
       }
       
-      session.data.readinessAssessment.bankStatements = validation.data || input;
+      // Check for partial matches
+      if (normalizedInput.includes('ready')) {
+        session.data.readinessAssessment.bankStatements = options[0];
+        return {
+          response: `✅ Selected: ${options[0]}\n\n` + this.getTrainingOptions(),
+          nextStep: 'readiness_training'
+        };
+      }
+      
+      if (normalizedInput.includes('personal account')) {
+        session.data.readinessAssessment.bankStatements = options[1];
+        return {
+          response: `✅ Selected: ${options[1]}\n\n` + this.getTrainingOptions(),
+          nextStep: 'readiness_training'
+        };
+      }
+      
+      if (normalizedInput.includes("don't have business")) {
+        session.data.readinessAssessment.bankStatements = options[2];
+        return {
+          response: `✅ Selected: ${options[2]}\n\n` + this.getTrainingOptions(),
+          nextStep: 'readiness_training'
+        };
+      }
+      
+      if (normalizedInput.includes('open business')) {
+        session.data.readinessAssessment.bankStatements = options[3];
+        return {
+          response: `✅ Selected: ${options[3]}\n\n` + this.getTrainingOptions(),
+          nextStep: 'readiness_training'
+        };
+      }
       
       return {
-        response: this.getTrainingOptions(),
-        nextStep: 'readiness_training'
+        response: `❌ Please select a valid option:\n\n` + this.getBankStatementsOptions(),
+        nextStep: 'readiness_bank_statements'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessBankStatements:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please try again.\n\n" + this.getBankStatementsOptions(),
         nextStep: 'readiness_bank_statements'
       };
     }
@@ -1703,7 +1824,7 @@ Type MENU to return to the main menu.`;
       message += `${index + 1}. ${option}\n`;
     });
     
-    message += "\nType the number:";
+    message += "\nType the number (1-4) or the option text:";
     
     return message;
   }
@@ -1717,25 +1838,60 @@ Type MENU to return to the main menu.`;
         "I want training opportunities"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment.businessTraining = options[num - 1];
         return {
-          response: `❌ ${validation.message}\n\nPlease select business training status:`,
-          nextStep: 'readiness_training'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getCooperativeOptions(),
+          nextStep: 'readiness_cooperative'
         };
       }
       
-      session.data.readinessAssessment.businessTraining = validation.data || input;
+      // Check for partial matches
+      if (normalizedInput.includes('formal')) {
+        session.data.readinessAssessment.businessTraining = options[0];
+        return {
+          response: `✅ Selected: ${options[0]}\n\n` + this.getCooperativeOptions(),
+          nextStep: 'readiness_cooperative'
+        };
+      }
+      
+      if (normalizedInput.includes('workshop') || normalizedInput.includes('course')) {
+        session.data.readinessAssessment.businessTraining = options[1];
+        return {
+          response: `✅ Selected: ${options[1]}\n\n` + this.getCooperativeOptions(),
+          nextStep: 'readiness_cooperative'
+        };
+      }
+      
+      if (normalizedInput === 'no' || normalizedInput.includes('no formal')) {
+        session.data.readinessAssessment.businessTraining = options[2];
+        return {
+          response: `✅ Selected: ${options[2]}\n\n` + this.getCooperativeOptions(),
+          nextStep: 'readiness_cooperative'
+        };
+      }
+      
+      if (normalizedInput.includes('want') || normalizedInput.includes('opportunities')) {
+        session.data.readinessAssessment.businessTraining = options[3];
+        return {
+          response: `✅ Selected: ${options[3]}\n\n` + this.getCooperativeOptions(),
+          nextStep: 'readiness_cooperative'
+        };
+      }
       
       return {
-        response: this.getCooperativeOptions(),
-        nextStep: 'readiness_cooperative'
+        response: `❌ Please select a valid option:\n\n` + this.getTrainingOptions(),
+        nextStep: 'readiness_training'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessTraining:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please try again.\n\n" + this.getTrainingOptions(),
         nextStep: 'readiness_training'
       };
     }
@@ -1757,7 +1913,7 @@ Type MENU to return to the main menu.`;
       message += `${index + 1}. ${option}\n`;
     });
     
-    message += "\nType the number:";
+    message += "\nType the number (1-5) or the option text:";
     
     return message;
   }
@@ -1772,25 +1928,68 @@ Type MENU to return to the main menu.`;
         "Not sure what it is"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment.cooperativeInterest = options[num - 1];
         return {
-          response: `❌ ${validation.message}\n\nPlease select cooperative interest:`,
-          nextStep: 'readiness_cooperative'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
         };
       }
       
-      session.data.readinessAssessment.cooperativeInterest = validation.data || input;
+      // Check for partial matches
+      if (normalizedInput.includes('already a member')) {
+        session.data.readinessAssessment.cooperativeInterest = options[0];
+        return {
+          response: `✅ Selected: ${options[0]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
+        };
+      }
+      
+      if (normalizedInput.includes('join')) {
+        session.data.readinessAssessment.cooperativeInterest = options[1];
+        return {
+          response: `✅ Selected: ${options[1]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
+        };
+      }
+      
+      if (normalizedInput.includes('form')) {
+        session.data.readinessAssessment.cooperativeInterest = options[2];
+        return {
+          response: `✅ Selected: ${options[2]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
+        };
+      }
+      
+      if (normalizedInput.includes('alone')) {
+        session.data.readinessAssessment.cooperativeInterest = options[3];
+        return {
+          response: `✅ Selected: ${options[3]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
+        };
+      }
+      
+      if (normalizedInput.includes('not sure') || normalizedInput.includes("don't know")) {
+        session.data.readinessAssessment.cooperativeInterest = options[4];
+        return {
+          response: `✅ Selected: ${options[4]}\n\n` + this.getSelfAssessmentOptions(),
+          nextStep: 'readiness_self_assessment'
+        };
+      }
       
       return {
-        response: this.getSelfAssessmentOptions(),
-        nextStep: 'readiness_self_assessment'
+        response: `❌ Please select a valid option:\n\n` + this.getCooperativeOptions(),
+        nextStep: 'readiness_cooperative'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessCooperative:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please try again.\n\n" + this.getCooperativeOptions(),
         nextStep: 'readiness_cooperative'
       };
     }
@@ -1806,10 +2005,10 @@ Type MENU to return to the main menu.`;
     ];
     
     let message = "📊 *SELF-ASSESSMENT READINESS*\n\n";
-    message += "Rate your business readiness:\n\n";
+    message += "Rate your business readiness on a scale of 1-5:\n\n";
     
     options.forEach((option, index) => {
-      message += `${option}\n`;
+      message += `${index + 1}. ${option}\n`;
     });
     
     message += "\nType the number (1-5):";
@@ -1827,26 +2026,27 @@ Type MENU to return to the main menu.`;
         "5 - Fully ready (professional operation)"
       ];
       
-      const validation = ValidationService.validateSelection(input, options);
+      const normalizedInput = input.toString().toLowerCase().trim();
       
-      if (!validation.valid) {
+      // Check for number input (1-5)
+      const num = parseInt(normalizedInput, 10);
+      if (!isNaN(num) && num >= 1 && num <= options.length) {
+        session.data.readinessAssessment.selfAssessmentReadiness = num.toString();
         return {
-          response: `❌ ${validation.message}\n\nPlease select readiness level (1-5):`,
-          nextStep: 'readiness_self_assessment'
+          response: `✅ Selected: ${options[num - 1]}\n\n` + this.getSupportNeedsOptions(),
+          nextStep: 'readiness_support_needs'
         };
       }
       
-      const readinessLevel = validation.data ? validation.data.split(' - ')[0] : input;
-      session.data.readinessAssessment.selfAssessmentReadiness = readinessLevel;
-      
       return {
-        response: this.getSupportNeedsOptions(),
-        nextStep: 'readiness_support_needs'
+        response: `❌ Please enter a number from 1 to 5:\n\n` + this.getSelfAssessmentOptions(),
+        nextStep: 'readiness_self_assessment'
       };
+      
     } catch (error) {
       console.error('Error in handleReadinessSelfAssessment:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please enter a number 1-5.\n\n" + this.getSelfAssessmentOptions(),
         nextStep: 'readiness_self_assessment'
       };
     }
@@ -1895,7 +2095,7 @@ Type MENU to return to the main menu.`;
       
       if (!validation.valid) {
         return {
-          response: `❌ ${validation.message}\n\nPlease select support needs:`,
+          response: `❌ ${validation.message}\n\n` + this.getSupportNeedsOptions(),
           nextStep: 'readiness_support_needs'
         };
       }
@@ -1909,7 +2109,7 @@ Type MENU to return to the main menu.`;
     } catch (error) {
       console.error('Error in handleReadinessSupportNeeds:', error);
       return {
-        response: "❌ There was an error processing your response. Please try again.",
+        response: "❌ There was an error. Please try again.\n\n" + this.getSupportNeedsOptions(),
         nextStep: 'readiness_support_needs'
       };
     }
