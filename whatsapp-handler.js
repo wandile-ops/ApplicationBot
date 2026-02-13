@@ -79,7 +79,7 @@ class WhatsAppHandler {
   }
 
   isGreeting(message) {
-    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
+    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy'];
     return greetings.includes(message);
   }
 
@@ -108,8 +108,21 @@ class WhatsAppHandler {
       return this.handleConsentStep(normalizedMessage, session);
     }
     
+    // Handle welcome menu
+    if (step === 'welcome') {
+      return this.handleWelcomeMenu(normalizedMessage, session);
+    }
+    
     // Process based on current step
-    return questionFlows.handleAnswer(step, message, session);
+    try {
+      return questionFlows.handleAnswer(step, message, session);
+    } catch (error) {
+      logger.error('Error in questionFlows.handleAnswer:', error);
+      return {
+        response: "Sorry, something went wrong processing your answer. Please try again.",
+        nextStep: step
+      };
+    }
   }
 
   isGlobalCommand(message) {
@@ -129,8 +142,7 @@ class WhatsAppHandler {
       
       return {
         response: "✅ Thank you for your consent. Let's begin your funding application!\n\n" +
-                 "You can type *SAVE* at any time to save your progress and continue later.\n" +
-                 "Type *MENU* to see available options at any time.",
+                 "📝 *Please enter your 13-digit South African ID number:*\n\nExample: 9001010001088",
         nextStep: 'personal_id'
       };
     } else if (message === 'exit') {
@@ -142,6 +154,111 @@ class WhatsAppHandler {
       return {
         response: questionFlows.getConsentMessage(),
         nextStep: 'consent'
+      };
+    }
+  }
+
+  handleWelcomeMenu(input, session) {
+    const normalizedInput = input.toLowerCase().trim();
+    
+    try {
+      console.log('Handling welcome menu input:', normalizedInput); // Debug log
+      
+      if (normalizedInput === '1' || normalizedInput === 'continue' || normalizedInput === 'start') {
+        // Check consent first
+        if (!session.data.consentGiven) {
+          return {
+            response: questionFlows.getConsentMessage(),
+            nextStep: 'consent'
+          };
+        }
+        
+        // Determine where to continue
+        if (!session.data.personalInfo || !session.data.personalInfo.idNumber) {
+          return {
+            response: "📝 *Please enter your 13-digit South African ID number:*\n\nExample: 9001010001088",
+            nextStep: 'personal_id'
+          };
+        } else if (!session.data.personalInfo.fullName) {
+          return {
+            response: "📝 *Please enter your full name:*\n\nExample: John Doe",
+            nextStep: 'personal_name'
+          };
+        } else if (!session.data.personalInfo.dob) {
+          return {
+            response: "📝 *Please enter your date of birth (DD/MM/YYYY):*\n\nExample: 15/01/1990",
+            nextStep: 'personal_dob'
+          };
+        } else if (!session.data.personalInfo.phone) {
+          return {
+            response: "📝 *Please enter your phone number:*\n\nExample: 0712345678",
+            nextStep: 'personal_phone'
+          };
+        } else if (!session.data.personalInfo.email) {
+          return {
+            response: "📝 *Please enter your email address:*\n\nExample: name@email.com",
+            nextStep: 'personal_email'
+          };
+        } else if (!session.data.businessInfo || !session.data.businessInfo.businessName) {
+          return {
+            response: "🏢 *Please enter your Business Name:*",
+            nextStep: 'business_name'
+          };
+        } else {
+          // Show progress and ask where to continue
+          const progress = questionFlows.calculateProgress(session.data);
+          return {
+            response: `Your application is ${progress}% complete. Type CONTINUE to resume where you left off.`,
+            nextStep: session.step
+          };
+        }
+      } else if (normalizedInput === '2' || normalizedInput === 'progress') {
+        const progressPercent = questionFlows.calculateProgress(session.data);
+        const sections = questionFlows.getCompletedSections(session.data);
+        
+        let response = `📊 *APPLICATION PROGRESS*\n\n`;
+        response += `Overall Completion: ${progressPercent}%\n\n`;
+        response += `*Completed Sections:*\n`;
+        response += (sections.completed.length > 0 ? sections.completed.join('\n') : 'None yet') + '\n\n';
+        
+        if (sections.incomplete.length > 0) {
+          response += `*Remaining Sections:*\n`;
+          response += sections.incomplete.join('\n') + '\n\n';
+        }
+        
+        response += `Type 1 to continue your application.`;
+        
+        return {
+          response: response,
+          nextStep: 'welcome'
+        };
+      } else if (normalizedInput === '3' || normalizedInput === 'edit') {
+        return {
+          response: questionFlows.getEditMenu(session.data),
+          nextStep: 'edit_menu'
+        };
+      } else if (normalizedInput === '4' || normalizedInput === 'save') {
+        return {
+          response: "Would you like to save your progress and continue later? Type YES to save or NO to continue.",
+          nextStep: 'save_confirm',
+          shouldSave: true
+        };
+      } else if (normalizedInput === '5' || normalizedInput === 'help') {
+        return {
+          response: questionFlows.getHelpMessage(),
+          nextStep: 'welcome'
+        };
+      } else {
+        return {
+          response: "Please choose a valid option (1-5):\n\n1️⃣ Continue Application\n2️⃣ View Progress\n3️⃣ Edit Information\n4️⃣ Save & Exit\n5️⃣ Help",
+          nextStep: 'welcome'
+        };
+      }
+    } catch (error) {
+      console.error('Error in handleWelcomeMenu:', error);
+      return {
+        response: "Sorry, something went wrong. Please try again or type START to restart.",
+        nextStep: 'welcome'
       };
     }
   }
@@ -161,7 +278,8 @@ class WhatsAppHandler {
       case 'save':
         return {
           response: "Would you like to save your progress and continue later? Type YES to save or NO to continue.",
-          nextStep: 'save_confirm'
+          nextStep: 'save_confirm',
+          shouldSave: true
         };
       case 'exit':
       case 'cancel':
@@ -177,7 +295,8 @@ class WhatsAppHandler {
           employmentRevenue: {},
           fundingRequest: {},
           readinessAssessment: {},
-          consentGiven: false
+          consentGiven: false,
+          consentTimestamp: null
         };
         sessionManager.updateSessionData(session.id, session.data);
         return {
@@ -187,7 +306,7 @@ class WhatsAppHandler {
       case 'start':
         if (session.data.consentGiven) {
           return {
-            response: "Let's continue your application.",
+            response: questionFlows.getWelcomeMenu(session),
             nextStep: 'welcome'
           };
         } else {
@@ -236,11 +355,71 @@ class WhatsAppHandler {
           response: response,
           nextStep: session.step
         };
+      case 'back':
+        return this.handleBackNavigation(session);
       default:
         return {
           response: "Command not recognized. Type HELP for available commands.",
           nextStep: session.step
         };
+    }
+  }
+
+  handleBackNavigation(session) {
+    const stepHierarchy = {
+      'personal_name': 'personal_id',
+      'personal_dob': 'personal_name',
+      'personal_phone': 'personal_dob',
+      'personal_email': 'personal_phone',
+      'business_name': 'personal_email',
+      'business_trading': 'business_name',
+      'business_trading_name': 'business_trading',
+      'business_cipc': 'business_trading_name',
+      'business_sub_sector': 'business_cipc',
+      'business_description': 'business_sub_sector',
+      'business_type': 'business_description',
+      'business_industry': 'business_type',
+      'address_street': 'business_industry',
+      'address_township': 'address_street',
+      'address_city': 'address_township',
+      'address_district': 'address_city',
+      'address_province': 'address_district',
+      'address_zip': 'address_province',
+      'employment_total': 'address_zip',
+      'employment_fulltime': 'employment_total',
+      'employment_parttime': 'employment_fulltime',
+      'employment_years': 'employment_parttime',
+      'employment_revenue': 'employment_years',
+      'funding_amount': 'employment_revenue',
+      'funding_purpose': 'funding_amount',
+      'funding_other_purpose': 'funding_purpose',
+      'funding_type': 'funding_other_purpose',
+      'funding_repayment': 'funding_type',
+      'funding_justification': 'funding_repayment',
+      'readiness_business_plan': 'funding_justification',
+      'readiness_financial_records': 'readiness_business_plan',
+      'readiness_bank_statements': 'readiness_financial_records',
+      'readiness_training': 'readiness_bank_statements',
+      'readiness_cooperative': 'readiness_training',
+      'readiness_self_assessment': 'readiness_cooperative',
+      'readiness_support_needs': 'readiness_self_assessment',
+      'review_summary': 'readiness_support_needs',
+      'confirm_submission': 'review_summary'
+    };
+    
+    const currentStep = session.step;
+    const previousStep = stepHierarchy[currentStep];
+    
+    if (previousStep) {
+      return {
+        response: `Going back...`,
+        nextStep: previousStep
+      };
+    } else {
+      return {
+        response: "Cannot go back from here. Type MENU for options.",
+        nextStep: session.step
+      };
     }
   }
 
@@ -279,6 +458,7 @@ class WhatsAppHandler {
     try {
       if (!this.whatsappToken || !this.phoneId) {
         logger.warn('WhatsApp not configured, skipping send');
+        console.log(`[Would send to ${to}]: ${message.substring(0, 100)}...`);
         return;
       }
       
