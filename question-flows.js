@@ -347,7 +347,6 @@ Before we begin, please read and agree to how we handle your data:
   
   getWelcomeMenu(session) {
     try {
-      // Ensure session and session.data exist
       if (!session) session = { data: {} };
       if (!session.data) session.data = {};
       
@@ -382,7 +381,6 @@ Before we begin, please read and agree to how we handle your data:
     
     try {
       if (normalizedInput === '1' || normalizedInput === 'continue' || normalizedInput === 'start') {
-        // Check consent first
         if (!session.data.consentGiven) {
           return {
             response: this.getConsentMessage(),
@@ -390,7 +388,6 @@ Before we begin, please read and agree to how we handle your data:
           };
         }
         
-        // Determine where to continue
         if (!session.data.personalInfo || !session.data.personalInfo.idNumber) {
           return {
             response: "📝 *Please enter your 13-digit South African ID number:*\n\nExample: 9001010001088",
@@ -422,7 +419,6 @@ Before we begin, please read and agree to how we handle your data:
             nextStep: 'business_name'
           };
         } else {
-          // Show progress and ask where to continue
           const progress = this.calculateProgress(session.data);
           return {
             response: `Your application is ${progress}% complete. Type CONTINUE to resume where you left off.`,
@@ -515,7 +511,6 @@ Type MENU to return to the main menu.`;
         };
       }
       
-      // Ensure personalInfo object exists
       if (!session.data.personalInfo) {
         session.data.personalInfo = {};
       }
@@ -552,7 +547,6 @@ Type MENU to return to the main menu.`;
       
       session.data.personalInfo.fullName = input.trim();
       
-      // If DOB was extracted from ID, confirm it
       if (session.data.personalInfo.dob) {
         const dobDate = moment(session.data.personalInfo.dob);
         return {
@@ -578,13 +572,11 @@ Type MENU to return to the main menu.`;
     const normalizedInput = input.toLowerCase().trim();
     
     if (normalizedInput === 'yes' || normalizedInput === 'y') {
-      // Keep the DOB from ID
       return {
         response: `✅ Date of birth confirmed.\n\nPlease enter your phone number:`,
         nextStep: 'personal_phone'
       };
     } else {
-      // User wants to enter different DOB
       return {
         response: "Please enter your correct date of birth (DD/MM/YYYY):",
         nextStep: 'personal_dob'
@@ -631,7 +623,6 @@ Type MENU to return to the main menu.`;
       }
       
       session.data.personalInfo.phone = validation.data.formatted;
-      session.data.personalInfo.whatsappNumber = validation.data.formatted;
       
       return {
         response: `✅ Phone number recorded.\n\nPlease enter your email address:`,
@@ -1523,7 +1514,7 @@ Type MENU to return to the main menu.`;
     }
   }
 
-// ============ READINESS ASSESSMENT ============
+  // ============ READINESS ASSESSMENT ============
   
   getBusinessPlanOptions() {
     const options = [
@@ -1554,37 +1545,25 @@ Type MENU to return to the main menu.`;
         "I need help creating one"
       ];
       
-      // Normalize input
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input (1-4)
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
+        if (!session.data.readinessAssessment) {
+          session.data.readinessAssessment = {};
+        }
         session.data.readinessAssessment.businessPlanStatus = options[num - 1];
-        
         return {
           response: `✅ Selected: ${options[num - 1]}\n\n` + this.getFinancialRecordsOptions(),
           nextStep: 'readiness_financial_records'
         };
       }
       
-      // Check for exact matches
-      const exactMatch = options.find(opt => opt.toLowerCase() === normalizedInput);
-      if (exactMatch) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
-        session.data.readinessAssessment.businessPlanStatus = exactMatch;
-        
-        return {
-          response: `✅ Selected: ${exactMatch}\n\n` + this.getFinancialRecordsOptions(),
-          nextStep: 'readiness_financial_records'
-        };
-      }
-      
-      // Check for partial matches
       if (normalizedInput.includes('written')) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
-        session.data.readinessAssessment.businessPlanStatus = options[0]; // Yes - I have a written plan
+        if (!session.data.readinessAssessment) {
+          session.data.readinessAssessment = {};
+        }
+        session.data.readinessAssessment.businessPlanStatus = options[0];
         return {
           response: `✅ Selected: ${options[0]}\n\n` + this.getFinancialRecordsOptions(),
           nextStep: 'readiness_financial_records'
@@ -1592,8 +1571,10 @@ Type MENU to return to the main menu.`;
       }
       
       if (normalizedInput.includes('basic') || normalizedInput.includes('not written')) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
-        session.data.readinessAssessment.businessPlanStatus = options[1]; // Yes - I have a basic plan
+        if (!session.data.readinessAssessment) {
+          session.data.readinessAssessment = {};
+        }
+        session.data.readinessAssessment.businessPlanStatus = options[1];
         return {
           response: `✅ Selected: ${options[1]}\n\n` + this.getFinancialRecordsOptions(),
           nextStep: 'readiness_financial_records'
@@ -1601,8 +1582,10 @@ Type MENU to return to the main menu.`;
       }
       
       if (normalizedInput.includes('no') && !normalizedInput.includes('help')) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
-        session.data.readinessAssessment.businessPlanStatus = options[2]; // No - I don't have one
+        if (!session.data.readinessAssessment) {
+          session.data.readinessAssessment = {};
+        }
+        session.data.readinessAssessment.businessPlanStatus = options[2];
         return {
           response: `✅ Selected: ${options[2]}\n\n` + this.getFinancialRecordsOptions(),
           nextStep: 'readiness_financial_records'
@@ -1610,15 +1593,16 @@ Type MENU to return to the main menu.`;
       }
       
       if (normalizedInput.includes('help') || normalizedInput.includes('need')) {
-        session.data.readinessAssessment = session.data.readinessAssessment || {};
-        session.data.readinessAssessment.businessPlanStatus = options[3]; // I need help creating one
+        if (!session.data.readinessAssessment) {
+          session.data.readinessAssessment = {};
+        }
+        session.data.readinessAssessment.businessPlanStatus = options[3];
         return {
           response: `✅ Selected: ${options[3]}\n\n` + this.getFinancialRecordsOptions(),
           nextStep: 'readiness_financial_records'
         };
       }
       
-      // If we get here, no match found
       return {
         response: `❌ Please select a valid option:\n\n` + this.getBusinessPlanOptions(),
         nextStep: 'readiness_business_plan'
@@ -1664,7 +1648,6 @@ Type MENU to return to the main menu.`;
       
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
         session.data.readinessAssessment.financialRecords = options[num - 1];
@@ -1674,7 +1657,6 @@ Type MENU to return to the main menu.`;
         };
       }
       
-      // Check for partial matches
       if (normalizedInput.includes('detailed')) {
         session.data.readinessAssessment.financialRecords = options[0];
         return {
@@ -1752,7 +1734,6 @@ Type MENU to return to the main menu.`;
       
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
         session.data.readinessAssessment.bankStatements = options[num - 1];
@@ -1762,7 +1743,6 @@ Type MENU to return to the main menu.`;
         };
       }
       
-      // Check for partial matches
       if (normalizedInput.includes('ready')) {
         session.data.readinessAssessment.bankStatements = options[0];
         return {
@@ -1840,7 +1820,6 @@ Type MENU to return to the main menu.`;
       
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
         session.data.readinessAssessment.businessTraining = options[num - 1];
@@ -1850,7 +1829,6 @@ Type MENU to return to the main menu.`;
         };
       }
       
-      // Check for partial matches
       if (normalizedInput.includes('formal')) {
         session.data.readinessAssessment.businessTraining = options[0];
         return {
@@ -1930,7 +1908,6 @@ Type MENU to return to the main menu.`;
       
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
         session.data.readinessAssessment.cooperativeInterest = options[num - 1];
@@ -1940,7 +1917,6 @@ Type MENU to return to the main menu.`;
         };
       }
       
-      // Check for partial matches
       if (normalizedInput.includes('already a member')) {
         session.data.readinessAssessment.cooperativeInterest = options[0];
         return {
@@ -2028,10 +2004,9 @@ Type MENU to return to the main menu.`;
       
       const normalizedInput = input.toString().toLowerCase().trim();
       
-      // Check for number input (1-5)
       const num = parseInt(normalizedInput, 10);
       if (!isNaN(num) && num >= 1 && num <= options.length) {
-        session.data.readinessAssessment.selfAssessmentReadiness = num.toString();
+        session.data.readinessAssessment.selfAssessmentReadiness = options[num - 1];
         return {
           response: `✅ Selected: ${options[num - 1]}\n\n` + this.getSupportNeedsOptions(),
           nextStep: 'readiness_support_needs'
@@ -2102,8 +2077,13 @@ Type MENU to return to the main menu.`;
       
       session.data.readinessAssessment.supportNeeds = validation.data;
       
+      // Generate the summary
+      const summary = this.getApplicationSummary(session.data);
+      
+      console.log('Summary generated, length:', summary.length);
+      
       return {
-        response: "✅ Readiness assessment completed!\n\nLet's review your application before submission.",
+        response: "✅ Readiness assessment completed!\n\n" + summary,
         nextStep: 'review_summary'
       };
     } catch (error) {
@@ -2119,12 +2099,18 @@ Type MENU to return to the main menu.`;
   
   getApplicationSummary(data) {
     try {
+      console.log('Generating summary with data');
+      
+      if (!data) {
+        return "No application data found. Please start your application first.";
+      }
+      
       let summary = "📋 *APPLICATION SUMMARY*\n\n";
       summary += "Please review your information:\n\n";
       
       // Personal Information
       summary += "👤 *PERSONAL INFORMATION*\n";
-      if (data.personalInfo) {
+      if (data.personalInfo && Object.keys(data.personalInfo).length > 0) {
         summary += `• ID: ${data.personalInfo.idNumber || 'Not provided'}\n`;
         summary += `• Name: ${data.personalInfo.fullName || 'Not provided'}\n`;
         summary += `• DOB: ${data.personalInfo.dob ? moment(data.personalInfo.dob).format('DD/MM/YYYY') : 'Not provided'}\n`;
@@ -2137,7 +2123,7 @@ Type MENU to return to the main menu.`;
       
       // Business Information
       summary += "🏢 *BUSINESS INFORMATION*\n";
-      if (data.businessInfo) {
+      if (data.businessInfo && Object.keys(data.businessInfo).length > 0) {
         summary += `• Business Name: ${data.businessInfo.businessName || 'Not provided'}\n`;
         summary += `• Trading Name: ${data.businessInfo.tradingName || 'Not provided'}\n`;
         summary += `• CIPC: ${data.businessInfo.cipcNumber || 'Not provided'}\n`;
@@ -2151,7 +2137,7 @@ Type MENU to return to the main menu.`;
       
       // Address Information
       summary += "📍 *ADDRESS INFORMATION*\n";
-      if (data.addressInfo) {
+      if (data.addressInfo && Object.keys(data.addressInfo).length > 0) {
         summary += `• Street: ${data.addressInfo.streetAddress || 'Not provided'}\n`;
         summary += `• Township: ${data.addressInfo.township || 'Not provided'}\n`;
         summary += `• City: ${data.addressInfo.city || 'Not provided'}\n`;
@@ -2165,7 +2151,7 @@ Type MENU to return to the main menu.`;
       
       // Employment & Revenue
       summary += "👥 *EMPLOYMENT & REVENUE*\n";
-      if (data.employmentRevenue) {
+      if (data.employmentRevenue && Object.keys(data.employmentRevenue).length > 0) {
         summary += `• Total Employees: ${data.employmentRevenue.totalEmployees || 'Not provided'}\n`;
         summary += `• Full-Time: ${data.employmentRevenue.fullTimeCount || 'Not provided'}\n`;
         summary += `• Part-Time: ${data.employmentRevenue.partTimeCount || 'Not provided'}\n`;
@@ -2178,7 +2164,7 @@ Type MENU to return to the main menu.`;
       
       // Funding Request
       summary += "💰 *FUNDING REQUEST*\n";
-      if (data.fundingRequest) {
+      if (data.fundingRequest && Object.keys(data.fundingRequest).length > 0) {
         summary += `• Amount: R${data.fundingRequest.fundingAmount?.toLocaleString() || 'Not provided'}\n`;
         summary += `• Purpose: ${Array.isArray(data.fundingRequest.fundingPurpose) ? data.fundingRequest.fundingPurpose.join(', ') : data.fundingRequest.fundingPurpose || 'Not provided'}\n`;
         if (data.fundingRequest.otherPurposeDetails) {
@@ -2195,13 +2181,13 @@ Type MENU to return to the main menu.`;
       
       // Readiness Assessment
       summary += "📋 *READINESS ASSESSMENT*\n";
-      if (data.readinessAssessment) {
+      if (data.readinessAssessment && Object.keys(data.readinessAssessment).length > 0) {
         summary += `• Business Plan: ${data.readinessAssessment.businessPlanStatus || 'Not provided'}\n`;
         summary += `• Financial Records: ${data.readinessAssessment.financialRecords || 'Not provided'}\n`;
         summary += `• Bank Statements: ${data.readinessAssessment.bankStatements || 'Not provided'}\n`;
         summary += `• Business Training: ${data.readinessAssessment.businessTraining || 'Not provided'}\n`;
         summary += `• Cooperative Interest: ${data.readinessAssessment.cooperativeInterest || 'Not provided'}\n`;
-        summary += `• Self-Assessment: ${data.readinessAssessment.selfAssessmentReadiness || 'Not provided'}/5\n`;
+        summary += `• Self-Assessment: ${data.readinessAssessment.selfAssessmentReadiness || 'Not provided'}\n`;
         summary += `• Support Needs: ${Array.isArray(data.readinessAssessment.supportNeeds) ? data.readinessAssessment.supportNeeds.join(', ') : data.readinessAssessment.supportNeeds || 'Not provided'}\n`;
       } else {
         summary += "• Not provided\n";
@@ -2239,8 +2225,9 @@ Type MENU to return to the main menu.`;
         shouldSave: true
       };
     } else {
+      // If user types anything else, show the summary again
       return {
-        response: "Please type CONFIRM, EDIT, or SAVE.",
+        response: this.getApplicationSummary(session.data),
         nextStep: 'review_summary'
       };
     }
