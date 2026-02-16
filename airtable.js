@@ -30,7 +30,11 @@ class AirtableService {
     
     this.tableName = 'Applicants';
     
+    // Valid status options from your Airtable schema
+    this.validStatusOptions = ['Draft', 'In Progress', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
+    
     // Define field name mappings - EXACTLY matching your schema
+    // EXCLUDING computed fields that cannot be set manually
     this.fieldMappings = {
       // Primary Field
       'South African ID': 'South African ID',
@@ -89,33 +93,34 @@ class AirtableService {
       'Status': 'Status',
       'Submission Date': 'Submission Date',
       'Applicant UUID': 'Applicant UUID',
-      'Record ID': 'Record ID',
+      'Record ID': 'Record ID'
       
-      // Other fields from your schema (let Airtable handle these automatically)
-      'Confidence Score': 'Confidence Score',
-      'Assigned Layer': 'Assigned Layer',
-      'Readiness Assessments': 'Readiness Assessments',
-      'Manual Review Queues': 'Manual Review Queues',
-      'Latest Assessment Total Score': 'Latest Assessment Total Score',
-      'Latest Assessment Confidence %': 'Latest Assessment Confidence %',
-      'Assessment Count': 'Assessment Count',
-      'Manual Review Count': 'Manual Review Count',
-      'Funding Justification Summary (AI)': 'Funding Justification Summary (AI)',
-      'Funding Purpose Category (AI)': 'Funding Purpose Category (AI)',
-      'Layer Assignment Logics': 'Layer Assignment Logics',
-      'Disqualifier Reason': 'Disqualifier Reason',
-      'Auto Assigned Layer': 'Auto Assigned Layer',
-      'Layer Confidence Score': 'Layer Confidence Score',
-      'Auto-Assigned Layer': 'Auto-Assigned Layer',
-      'Users': 'Users',
-      'Dashboard Completion %': 'Dashboard Completion %',
-      'Current Risk Status': 'Current Risk Status',
-      'Assigned Support Layer': 'Assigned Support Layer'
+      // EXCLUDED COMPUTED FIELDS - Do not try to set these:
+      // 'Confidence Score': 'Confidence Score', - Computed
+      // 'Assigned Layer': 'Assigned Layer', - Computed
+      // 'Readiness Assessments': 'Readiness Assessments', - Computed
+      // 'Manual Review Queues': 'Manual Review Queues', - Computed
+      // 'Latest Assessment Total Score': 'Latest Assessment Total Score', - Computed
+      // 'Latest Assessment Confidence %': 'Latest Assessment Confidence %', - Computed
+      // 'Assessment Count': 'Assessment Count', - Computed
+      // 'Manual Review Count': 'Manual Review Count', - Computed
+      // 'Funding Justification Summary (AI)': 'Funding Justification Summary (AI)', - AI Generated
+      // 'Funding Purpose Category (AI)': 'Funding Purpose Category (AI)', - AI Generated
+      // 'Layer Assignment Logics': 'Layer Assignment Logics', - Computed
+      // 'Disqualifier Reason': 'Disqualifier Reason', - Computed
+      // 'Auto Assigned Layer': 'Auto Assigned Layer', - Computed
+      // 'Layer Confidence Score': 'Layer Confidence Score', - Computed
+      // 'Auto-Assigned Layer': 'Auto-Assigned Layer', - Computed
+      // 'Users': 'Users', - Likely a relation field
+      // 'Dashboard Completion %': 'Dashboard Completion %', - Computed
+      // 'Current Risk Status': 'Current Risk Status', - Computed
+      // 'Assigned Support Layer': 'Assigned Support Layer' - Computed
     };
     
     logger.info('Airtable service initialized', { 
       tableName: this.tableName,
-      fields: Object.keys(this.fieldMappings).length
+      fields: Object.keys(this.fieldMappings).length,
+      validStatusOptions: this.validStatusOptions
     });
   }
 
@@ -124,6 +129,22 @@ class AirtableService {
     if (!value) return '';
     
     const valueStr = value.toString().trim();
+    
+    // Status field - must use valid options
+    if (fieldName === 'Status') {
+      // Check if the value is in valid options (case insensitive)
+      const match = this.validStatusOptions.find(opt => 
+        opt.toLowerCase() === valueStr.toLowerCase()
+      );
+      
+      if (match) {
+        return match;
+      }
+      
+      // Default to 'Draft' if not valid
+      logger.warn(`Invalid status value "${valueStr}", defaulting to "Draft"`);
+      return 'Draft';
+    }
     
     // Loan Repayment Ability options
     if (fieldName === 'Loan Repayment Ability') {
@@ -146,7 +167,6 @@ class AirtableService {
         'Other'
       ];
       
-      // Try to find a match
       const match = validOptions.find(opt => 
         opt.toLowerCase() === valueStr.toLowerCase() ||
         opt.toLowerCase().includes(valueStr.toLowerCase()) ||
@@ -317,7 +337,6 @@ class AirtableService {
         return validOptions[index];
       }
       
-      // Try to find a match
       const match = validOptions.find(opt => 
         opt.toLowerCase() === valueStr.toLowerCase() ||
         opt.toLowerCase().includes(valueStr.toLowerCase()) ||
@@ -351,61 +370,124 @@ class AirtableService {
       // Build data object with exact field names
       const data = {};
       
-      // Personal Information
-      data[this.fieldMappings['South African ID']] = sessionData.personalInfo?.idNumber || '';
-      data[this.fieldMappings['Full Name']] = sessionData.personalInfo?.fullName || '';
-      data[this.fieldMappings['Date of Birth']] = sessionData.personalInfo?.dob ? 
-        moment(sessionData.personalInfo.dob).format('YYYY-MM-DD') : '';
-      data[this.fieldMappings['Phone Number']] = sessionData.personalInfo?.phone || '';
-      data[this.fieldMappings['Email Address']] = sessionData.personalInfo?.email || '';
+      // Personal Information - Use null for empty dates instead of empty string
+      if (sessionData.personalInfo?.idNumber) {
+        data[this.fieldMappings['South African ID']] = sessionData.personalInfo.idNumber;
+      }
+      
+      if (sessionData.personalInfo?.fullName) {
+        data[this.fieldMappings['Full Name']] = sessionData.personalInfo.fullName;
+      }
+      
+      // Date of Birth - if exists, format it
+      if (sessionData.personalInfo?.dob) {
+        data[this.fieldMappings['Date of Birth']] = moment(sessionData.personalInfo.dob).format('YYYY-MM-DD');
+      }
+      
+      if (sessionData.personalInfo?.phone) {
+        data[this.fieldMappings['Phone Number']] = sessionData.personalInfo.phone;
+      }
+      
+      if (sessionData.personalInfo?.email) {
+        data[this.fieldMappings['Email Address']] = sessionData.personalInfo.email;
+      }
       
       // Business Information
-      data[this.fieldMappings['Business Name']] = sessionData.businessInfo?.businessName || '';
-      data[this.fieldMappings['Trading Name']] = sessionData.businessInfo?.tradingName || 
-        sessionData.businessInfo?.businessName || '';
+      if (sessionData.businessInfo?.businessName) {
+        data[this.fieldMappings['Business Name']] = sessionData.businessInfo.businessName;
+      }
       
-      // Normalize single select fields
-      data[this.fieldMappings['Business Type']] = this.normalizeSingleSelectValue(
-        'Business Type', 
-        sessionData.businessInfo?.businessType || ''
-      );
+      if (sessionData.businessInfo?.tradingName) {
+        data[this.fieldMappings['Trading Name']] = sessionData.businessInfo.tradingName;
+      } else if (sessionData.businessInfo?.businessName) {
+        data[this.fieldMappings['Trading Name']] = sessionData.businessInfo.businessName;
+      }
       
-      data[this.fieldMappings['CIPC Registration Number']] = sessionData.businessInfo?.cipcNumber || 'Not Provided';
+      if (sessionData.businessInfo?.businessType) {
+        data[this.fieldMappings['Business Type']] = this.normalizeSingleSelectValue(
+          'Business Type', 
+          sessionData.businessInfo.businessType
+        );
+      }
       
-      data[this.fieldMappings['Industry']] = this.normalizeSingleSelectValue(
-        'Industry', 
-        sessionData.businessInfo?.industry || ''
-      );
+      if (sessionData.businessInfo?.cipcNumber) {
+        data[this.fieldMappings['CIPC Registration Number']] = sessionData.businessInfo.cipcNumber;
+      } else {
+        data[this.fieldMappings['CIPC Registration Number']] = 'Not Provided';
+      }
       
-      data[this.fieldMappings['Sub-Sector']] = sessionData.businessInfo?.subSector || '';
-      data[this.fieldMappings['Business Description']] = sessionData.businessInfo?.description || '';
-      data[this.fieldMappings['Years in Operation']] = sessionData.employmentRevenue?.yearsInOperation || 0;
+      if (sessionData.businessInfo?.industry) {
+        data[this.fieldMappings['Industry']] = this.normalizeSingleSelectValue(
+          'Industry', 
+          sessionData.businessInfo.industry
+        );
+      }
+      
+      if (sessionData.businessInfo?.subSector) {
+        data[this.fieldMappings['Sub-Sector']] = sessionData.businessInfo.subSector;
+      }
+      
+      if (sessionData.businessInfo?.description) {
+        data[this.fieldMappings['Business Description']] = sessionData.businessInfo.description;
+      }
+      
+      if (sessionData.employmentRevenue?.yearsInOperation !== undefined) {
+        data[this.fieldMappings['Years in Operation']] = sessionData.employmentRevenue.yearsInOperation;
+      }
       
       // Address Information
-      data[this.fieldMappings['Street Address']] = sessionData.addressInfo?.streetAddress || '';
-      data[this.fieldMappings['Township']] = sessionData.addressInfo?.township || '';
-      data[this.fieldMappings['City']] = sessionData.addressInfo?.city || '';
-      data[this.fieldMappings['District']] = sessionData.addressInfo?.district || '';
-      data[this.fieldMappings['Zip Code']] = sessionData.addressInfo?.zipCode || '';
+      if (sessionData.addressInfo?.streetAddress) {
+        data[this.fieldMappings['Street Address']] = sessionData.addressInfo.streetAddress;
+      }
       
-      data[this.fieldMappings['Province']] = this.normalizeSingleSelectValue(
-        'Province', 
-        sessionData.addressInfo?.province || ''
-      );
+      if (sessionData.addressInfo?.township) {
+        data[this.fieldMappings['Township']] = sessionData.addressInfo.township;
+      }
+      
+      if (sessionData.addressInfo?.city) {
+        data[this.fieldMappings['City']] = sessionData.addressInfo.city;
+      }
+      
+      if (sessionData.addressInfo?.district) {
+        data[this.fieldMappings['District']] = sessionData.addressInfo.district;
+      }
+      
+      if (sessionData.addressInfo?.zipCode) {
+        data[this.fieldMappings['Zip Code']] = sessionData.addressInfo.zipCode;
+      }
+      
+      if (sessionData.addressInfo?.province) {
+        data[this.fieldMappings['Province']] = this.normalizeSingleSelectValue(
+          'Province', 
+          sessionData.addressInfo.province
+        );
+      }
       
       // Employee Information
-      data[this.fieldMappings['Total Employees']] = sessionData.employmentRevenue?.totalEmployees || 0;
-      data[this.fieldMappings['Full-Time Count']] = sessionData.employmentRevenue?.fullTimeCount || 0;
-      data[this.fieldMappings['Part-Time Count']] = sessionData.employmentRevenue?.partTimeCount || 0;
+      if (sessionData.employmentRevenue?.totalEmployees !== undefined) {
+        data[this.fieldMappings['Total Employees']] = sessionData.employmentRevenue.totalEmployees;
+      }
+      
+      if (sessionData.employmentRevenue?.fullTimeCount !== undefined) {
+        data[this.fieldMappings['Full-Time Count']] = sessionData.employmentRevenue.fullTimeCount;
+      }
+      
+      if (sessionData.employmentRevenue?.partTimeCount !== undefined) {
+        data[this.fieldMappings['Part-Time Count']] = sessionData.employmentRevenue.partTimeCount;
+      }
       
       // Financial Information
-      data[this.fieldMappings['Monthly Revenue Range']] = this.normalizeSingleSelectValue(
-        'Monthly Revenue Range', 
-        sessionData.employmentRevenue?.monthlyRevenueRange || ''
-      );
+      if (sessionData.employmentRevenue?.monthlyRevenueRange) {
+        data[this.fieldMappings['Monthly Revenue Range']] = this.normalizeSingleSelectValue(
+          'Monthly Revenue Range', 
+          sessionData.employmentRevenue.monthlyRevenueRange
+        );
+      }
       
       // Funding Details
-      data[this.fieldMappings['Funding Amount ZAR']] = sessionData.fundingRequest?.fundingAmount || 0;
+      if (sessionData.fundingRequest?.fundingAmount !== undefined) {
+        data[this.fieldMappings['Funding Amount ZAR']] = sessionData.fundingRequest.fundingAmount;
+      }
       
       // Handle Funding Purpose (Multiple Select)
       if (sessionData.fundingRequest?.fundingPurpose) {
@@ -416,59 +498,73 @@ class AirtableService {
             .split(',')
             .map(item => item.trim())
             .filter(item => item);
-        } else {
-          data[this.fieldMappings['Funding Purpose']] = [];
         }
-      } else {
-        data[this.fieldMappings['Funding Purpose']] = [];
       }
       
-      data[this.fieldMappings['Other Purpose Details']] = sessionData.fundingRequest?.otherPurposeDetails || '';
+      if (sessionData.fundingRequest?.otherPurposeDetails) {
+        data[this.fieldMappings['Other Purpose Details']] = sessionData.fundingRequest.otherPurposeDetails;
+      }
       
-      data[this.fieldMappings['Preferred Funding Type']] = this.normalizeSingleSelectValue(
-        'Preferred Funding Type', 
-        sessionData.fundingRequest?.preferredFundingType || ''
-      );
+      if (sessionData.fundingRequest?.preferredFundingType) {
+        data[this.fieldMappings['Preferred Funding Type']] = this.normalizeSingleSelectValue(
+          'Preferred Funding Type', 
+          sessionData.fundingRequest.preferredFundingType
+        );
+      }
       
-      data[this.fieldMappings['Loan Repayment Ability']] = this.normalizeSingleSelectValue(
-        'Loan Repayment Ability', 
-        sessionData.fundingRequest?.loanRepaymentAbility || 'N/A'
-      );
+      if (sessionData.fundingRequest?.loanRepaymentAbility) {
+        data[this.fieldMappings['Loan Repayment Ability']] = this.normalizeSingleSelectValue(
+          'Loan Repayment Ability', 
+          sessionData.fundingRequest.loanRepaymentAbility
+        );
+      }
       
-      data[this.fieldMappings['Funding Justification']] = sessionData.fundingRequest?.justification || '';
-      
-      // AI fields are EXCLUDED from creation - they are auto-generated by Airtable
+      if (sessionData.fundingRequest?.justification) {
+        data[this.fieldMappings['Funding Justification']] = sessionData.fundingRequest.justification;
+      }
       
       // Readiness Assessment
-      data[this.fieldMappings['Business Plan Status']] = this.normalizeSingleSelectValue(
-        'Business Plan Status', 
-        sessionData.readinessAssessment?.businessPlanStatus || ''
-      );
+      if (sessionData.readinessAssessment?.businessPlanStatus) {
+        data[this.fieldMappings['Business Plan Status']] = this.normalizeSingleSelectValue(
+          'Business Plan Status', 
+          sessionData.readinessAssessment.businessPlanStatus
+        );
+      }
       
-      data[this.fieldMappings['Financial Records']] = this.normalizeSingleSelectValue(
-        'Financial Records', 
-        sessionData.readinessAssessment?.financialRecords || ''
-      );
+      if (sessionData.readinessAssessment?.financialRecords) {
+        data[this.fieldMappings['Financial Records']] = this.normalizeSingleSelectValue(
+          'Financial Records', 
+          sessionData.readinessAssessment.financialRecords
+        );
+      }
       
-      data[this.fieldMappings['Bank Statements']] = this.normalizeSingleSelectValue(
-        'Bank Statements', 
-        sessionData.readinessAssessment?.bankStatements || ''
-      );
+      if (sessionData.readinessAssessment?.bankStatements) {
+        data[this.fieldMappings['Bank Statements']] = this.normalizeSingleSelectValue(
+          'Bank Statements', 
+          sessionData.readinessAssessment.bankStatements
+        );
+      }
       
-      data[this.fieldMappings['Business Training']] = this.normalizeSingleSelectValue(
-        'Business Training', 
-        sessionData.readinessAssessment?.businessTraining || ''
-      );
+      if (sessionData.readinessAssessment?.businessTraining) {
+        data[this.fieldMappings['Business Training']] = this.normalizeSingleSelectValue(
+          'Business Training', 
+          sessionData.readinessAssessment.businessTraining
+        );
+      }
       
-      data[this.fieldMappings['Cooperative Interest']] = this.normalizeSingleSelectValue(
-        'Cooperative Interest', 
-        sessionData.readinessAssessment?.cooperativeInterest || ''
-      );
+      if (sessionData.readinessAssessment?.cooperativeInterest) {
+        data[this.fieldMappings['Cooperative Interest']] = this.normalizeSingleSelectValue(
+          'Cooperative Interest', 
+          sessionData.readinessAssessment.cooperativeInterest
+        );
+      }
       
-      data[this.fieldMappings['Self-Assessment Readiness']] = this.normalizeSingleSelectValue(
-        'Self-Assessment Readiness', 
-        sessionData.readinessAssessment?.selfAssessmentReadiness || ''
-      );
+      if (sessionData.readinessAssessment?.selfAssessmentReadiness) {
+        data[this.fieldMappings['Self-Assessment Readiness']] = this.normalizeSingleSelectValue(
+          'Self-Assessment Readiness', 
+          sessionData.readinessAssessment.selfAssessmentReadiness
+        );
+      }
       
       // Handle Support Needs (Multiple Select)
       if (sessionData.readinessAssessment?.supportNeeds) {
@@ -479,47 +575,43 @@ class AirtableService {
             .split(',')
             .map(item => item.trim())
             .filter(item => item);
-        } else {
-          data[this.fieldMappings['Support Needs']] = [];
         }
-      } else {
-        data[this.fieldMappings['Support Needs']] = [];
       }
       
-      // Metadata - Only fields that exist in your schema
-      data[this.fieldMappings['Session ID']] = sessionData.sessionId || '';
-      data[this.fieldMappings['Status']] = sessionData.status || 'Draft';
+      // Metadata
+      if (sessionData.sessionId) {
+        data[this.fieldMappings['Session ID']] = sessionData.sessionId;
+        data[this.fieldMappings['Applicant UUID']] = sessionData.sessionId;
+      }
+      
+      // Status field - use normalizeSingleSelectValue to ensure valid option
+      if (sessionData.status) {
+        data[this.fieldMappings['Status']] = this.normalizeSingleSelectValue('Status', sessionData.status);
+      } else {
+        data[this.fieldMappings['Status']] = 'Draft'; // Default status
+      }
+      
+      // Always set Submission Date
       data[this.fieldMappings['Submission Date']] = moment().format('YYYY-MM-DD');
-      data[this.fieldMappings['Applicant UUID']] = sessionData.sessionId || '';
       
-      // Clean numeric fields
+      // Clean numeric fields (only include if they have values)
       const numericFields = [
-        this.fieldMappings['Years in Operation'],
-        this.fieldMappings['Total Employees'],
-        this.fieldMappings['Full-Time Count'],
-        this.fieldMappings['Part-Time Count'],
-        this.fieldMappings['Funding Amount ZAR'],
-        this.fieldMappings['Confidence Score'],
-        this.fieldMappings['Latest Assessment Total Score'],
-        this.fieldMappings['Latest Assessment Confidence %'],
-        this.fieldMappings['Assessment Count'],
-        this.fieldMappings['Manual Review Count'],
-        this.fieldMappings['Layer Confidence Score'],
-        this.fieldMappings['Dashboard Completion %']
-      ].filter(field => field); // Remove any undefined fields
+        { field: this.fieldMappings['Years in Operation'], value: sessionData.employmentRevenue?.yearsInOperation },
+        { field: this.fieldMappings['Total Employees'], value: sessionData.employmentRevenue?.totalEmployees },
+        { field: this.fieldMappings['Full-Time Count'], value: sessionData.employmentRevenue?.fullTimeCount },
+        { field: this.fieldMappings['Part-Time Count'], value: sessionData.employmentRevenue?.partTimeCount },
+        { field: this.fieldMappings['Funding Amount ZAR'], value: sessionData.fundingRequest?.fundingAmount }
+      ];
       
-      numericFields.forEach(field => {
-        if (data[field] === '' || data[field] === null || data[field] === undefined) {
-          data[field] = 0;
-        }
-        if (data[field] !== undefined) {
-          data[field] = Number(data[field]) || 0;
+      numericFields.forEach(item => {
+        if (item.field && item.value !== undefined && item.value !== null) {
+          data[item.field] = Number(item.value) || 0;
         }
       });
       
       // Remove any undefined values
       Object.keys(data).forEach(key => {
-        if (data[key] === undefined) {
+        if (data[key] === undefined || data[key] === null) {
           delete data[key];
         }
       });
@@ -527,8 +619,9 @@ class AirtableService {
       logger.debug('Formatted application data', { 
         sessionId: sessionData.sessionId,
         fields: Object.keys(data).length,
-        submissionDate: data[this.fieldMappings['Submission Date']],
-        selfAssessment: data[this.fieldMappings['Self-Assessment Readiness']]
+        status: data[this.fieldMappings['Status']],
+        hasDateOfBirth: !!data[this.fieldMappings['Date of Birth']],
+        submissionDate: data[this.fieldMappings['Submission Date']]
       });
       
       return data;
@@ -540,9 +633,23 @@ class AirtableService {
 
   async createApplication(data) {
     try {
+      console.log('🔍 createApplication called with data:', {
+        sessionId: data.sessionId,
+        phoneNumber: data.phoneNumber,
+        status: data.status,
+        hasPersonalInfo: !!data.personalInfo,
+        hasDob: !!(data.personalInfo?.dob)
+      });
+      
+      if (!data.sessionId) {
+        console.error('❌ No sessionId provided to createApplication!');
+        throw new Error('Session ID is required');
+      }
+      
       logger.info('Creating new application', { 
         sessionId: data.sessionId,
-        phoneNumber: data.personalInfo?.phone
+        phoneNumber: data.personalInfo?.phone,
+        status: data.status
       });
       
       const recordData = this.formatApplicationData(data);
@@ -551,17 +658,10 @@ class AirtableService {
       logger.debug('Sending to Airtable:', {
         sessionId: data.sessionId,
         fieldCount: Object.keys(recordData).length,
-        sampleFields: {
-          'Full Name': recordData[this.fieldMappings['Full Name']],
-          'Phone Number': recordData[this.fieldMappings['Phone Number']],
-          'Business Name': recordData[this.fieldMappings['Business Name']],
-          'Status': recordData[this.fieldMappings['Status']],
-          'Loan Repayment': recordData[this.fieldMappings['Loan Repayment Ability']],
-          'Self-Assessment': recordData[this.fieldMappings['Self-Assessment Readiness']],
-          'Submission Date': recordData[this.fieldMappings['Submission Date']],
-          'Funding Purpose': recordData[this.fieldMappings['Funding Purpose']],
-          'Support Needs': recordData[this.fieldMappings['Support Needs']]
-        }
+        status: recordData[this.fieldMappings['Status']],
+        sessionIdField: recordData[this.fieldMappings['Session ID']],
+        dateOfBirth: recordData[this.fieldMappings['Date of Birth']],
+        fields: Object.keys(recordData)
       });
       
       // Check if Session ID already exists
@@ -574,9 +674,11 @@ class AirtableService {
       const record = await this.base(this.tableName).create(recordData);
       logger.info('Application created successfully', { 
         recordId: record.getId(),
-        sessionId: data.sessionId
+        sessionId: data.sessionId,
+        status: recordData[this.fieldMappings['Status']]
       });
       
+      console.log('✅ Record created with ID:', record.getId());
       return record.getId();
     } catch (error) {
       logger.error('Airtable create error:', {
@@ -584,6 +686,7 @@ class AirtableService {
         errorDetails: error,
         sessionId: data.sessionId
       });
+      console.error('Airtable create error details:', error);
       throw error;
     }
   }
@@ -618,7 +721,8 @@ class AirtableService {
       await record.update(updateData);
       logger.info('Application updated successfully', { 
         sessionId,
-        recordId: record.id
+        recordId: record.id,
+        status: updateData[this.fieldMappings['Status']]
       });
       
       return true;
